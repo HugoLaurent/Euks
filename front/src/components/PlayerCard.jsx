@@ -39,6 +39,7 @@ function PlayerCard({
   const auroraColorSpeed = 0.08 + reactiveEnergy * 0.14;
 
   const hasAudio = Boolean(track.audioSrc);
+  const isPurchaseDisabled = Boolean(track.isSold);
 
   const handleSeek = (event) => {
     if (!onSeek) {
@@ -201,12 +202,21 @@ function PlayerCard({
 
           <button
             type="button"
-            onClick={() => onPurchase?.(track)}
-            className="group inline-flex h-11 items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 text-sm font-medium text-emerald-50 transition duration-300 hover:scale-[1.02] hover:bg-emerald-300/16"
+            onClick={() => {
+              if (!isPurchaseDisabled) {
+                onPurchase?.(track);
+              }
+            }}
+            disabled={isPurchaseDisabled}
+            className={`group inline-flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-medium transition duration-300 ${
+              isPurchaseDisabled
+                ? "cursor-not-allowed border-amber-300/20 bg-amber-300/10 text-amber-50"
+                : "border-emerald-300/20 bg-emerald-300/10 text-emerald-50 hover:scale-[1.02] hover:bg-emerald-300/16"
+            }`}
             aria-label={labels.buy}
           >
             <ShoppingCart className="h-4.5 w-4.5 transition-transform duration-300 group-hover:scale-110" />
-            <span>{labels.buy}</span>
+            <span>{isPurchaseDisabled ? track.price : labels.buy}</span>
           </button>
         </div>
       </div>

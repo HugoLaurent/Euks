@@ -14,6 +14,8 @@ const trackSchema = vine.object({
   musicalKeyId: positiveInteger().nullable().optional(),
   priceCents: nonNegativeInteger(),
   listenCount: nonNegativeInteger().optional(),
+  isActive: vine.boolean().optional(),
+  isSold: vine.boolean().optional(),
   tagIds: vine.array(positiveInteger()).distinct().optional(),
 })
 

@@ -175,6 +175,42 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/paypal_payments_controller').default['captureOrder']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'catalog.manage.dashboard.summary': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/dashboard/summary'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/dashboard_controller').default['summary']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/dashboard_controller').default['summary']>>>
+    }
+  }
+  'catalog.manage.dashboard.purchases': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/dashboard/purchases'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/dashboard_controller').default['purchases']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/dashboard_controller').default['purchases']>>>
+    }
+  }
+  'catalog.manage.dashboard.tracks': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/dashboard/tracks'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/dashboard_controller').default['tracks']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/dashboard_controller').default['tracks']>>>
+    }
+  }
   'catalog.manage.licenses.store': {
     methods: ["POST"]
     pattern: '/api/v1/licenses'

@@ -61,6 +61,10 @@ function isAcceptedFileForZone(zone, file) {
 }
 
 function getLicensePriceCents(license) {
+  if (!license?.isPaypalEnabled) {
+    return null;
+  }
+
   const priceCents = Number(license?.priceCents);
 
   return Number.isFinite(priceCents) && priceCents >= 0 ? priceCents : null;
@@ -86,6 +90,45 @@ function formatLicensePrice(cents) {
   }
 
   return `${(priceCents / 100).toFixed(2)} EUR`;
+}
+
+function formatMoney(cents, currencyCode = "EUR", language = "fr") {
+  const amount = Number(cents || 0) / 100;
+
+  return new Intl.NumberFormat(language === "fr" ? "fr-FR" : "en-US", {
+    currency: currencyCode || "EUR",
+    style: "currency",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+function formatDateTime(value, language = "fr") {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat(language === "fr" ? "fr-FR" : "en-US", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function getPaginationMeta(payload) {
+  return (
+    payload?.meta ?? payload?.metadata ?? {
+    currentPage: 1,
+    lastPage: 1,
+    perPage: 12,
+    total: 0,
+    }
+  );
 }
 
 function readAudioFileDuration(file) {
@@ -143,6 +186,25 @@ async function parseResponsePayload(response) {
 function DashboardPage({ language = "fr", onLogout }) {
   const [activeSection, setActiveSection] = useState("overview");
   const [tracks, setTracks] = useState([]);
+  const [tracksMeta, setTracksMeta] = useState(getPaginationMeta());
+  const [trackPage, setTrackPage] = useState(1);
+  const [trackStatusFilter, setTrackStatusFilter] = useState("all");
+  const [trackSearch, setTrackSearch] = useState("");
+  const [trackReloadKey, setTrackReloadKey] = useState(0);
+  const [trackActionState, setTrackActionState] = useState({
+    id: null,
+    error: "",
+  });
+  const [summary, setSummary] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState("");
+  const [summaryReloadKey, setSummaryReloadKey] = useState(0);
+  const [purchases, setPurchases] = useState([]);
+  const [purchasesMeta, setPurchasesMeta] = useState(getPaginationMeta());
+  const [purchasesPage, setPurchasesPage] = useState(1);
+  const [purchaseStatusFilter, setPurchaseStatusFilter] = useState("all");
+  const [purchasesLoading, setPurchasesLoading] = useState(true);
+  const [purchasesError, setPurchasesError] = useState("");
   const [musicalKeys, setMusicalKeys] = useState([]);
   const [availableTags, setAvailableTags] = useState([]);
   const [availableLicenses, setAvailableLicenses] = useState([]);
@@ -189,31 +251,85 @@ function DashboardPage({ language = "fr", onLogout }) {
     stemsZip: "",
   });
   const [activeDropZone, setActiveDropZone] = useState("");
+  const canManageDashboard =
+    storedUser?.role === "admin" || storedUser?.role === "owner";
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function refreshProfile() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/account/profile`, {
+          credentials: "include",
+          headers: buildAuthHeaders(),
+        });
+        const payload = await parseResponsePayload(response);
+        const user = payload?.data ?? payload;
+
+        if (!response.ok || !user?.id) {
+          return;
+        }
+
+        if (!isCancelled) {
+          setStoredUser(user);
+          localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(user));
+        }
+      } catch {
+        // Keep the locally stored user as a fallback for offline/stale sessions.
+      }
+    }
+
+    refreshProfile();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let isCancelled = false;
 
     async function fetchTracks() {
+      if (!canManageDashboard) {
+        setTracks([]);
+        setTracksLoading(false);
+        return;
+      }
+
       setTracksLoading(true);
       setTracksError("");
 
       try {
+        const query = new URLSearchParams({
+          page: String(trackPage),
+          perPage: "8",
+          status: trackStatusFilter,
+        });
+
+        if (trackSearch.trim()) {
+          query.set("search", trackSearch.trim());
+        }
+
         const response = await fetch(
-          `${API_BASE_URL}/tracks?page=1&perPage=20`,
+          `${API_BASE_URL}/dashboard/tracks?${query.toString()}`,
+          {
+            credentials: "include",
+            headers: buildAuthHeaders(),
+          },
         );
-        const payload = await response.json();
+        const payload = await parseResponsePayload(response);
 
         if (!response.ok) {
           throw new Error(payload?.message || "Unable to load tracks.");
         }
 
-        const data = Array.isArray(payload) ? payload : payload?.data || [];
-
         if (!isCancelled) {
-          setTracks(Array.isArray(data) ? data : []);
+          setTracks(toArrayPayload(payload));
+          setTracksMeta(getPaginationMeta(payload));
         }
       } catch (error) {
         if (!isCancelled) {
+          setTracks([]);
           setTracksError(error.message || "Unable to load tracks.");
         }
       } finally {
@@ -228,7 +344,114 @@ function DashboardPage({ language = "fr", onLogout }) {
     return () => {
       isCancelled = true;
     };
-  }, []);
+  }, [
+    canManageDashboard,
+    trackPage,
+    trackReloadKey,
+    trackSearch,
+    trackStatusFilter,
+  ]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function fetchSummary() {
+      if (!canManageDashboard) {
+        setSummary(null);
+        setSummaryLoading(false);
+        return;
+      }
+
+      setSummaryLoading(true);
+      setSummaryError("");
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/dashboard/summary`, {
+          credentials: "include",
+          headers: buildAuthHeaders(),
+        });
+        const payload = await parseResponsePayload(response);
+
+        if (!response.ok) {
+          throw new Error(payload?.message || "Unable to load dashboard.");
+        }
+
+        if (!isCancelled) {
+          setSummary(payload);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setSummary(null);
+          setSummaryError(error.message || "Unable to load dashboard.");
+        }
+      } finally {
+        if (!isCancelled) {
+          setSummaryLoading(false);
+        }
+      }
+    }
+
+    fetchSummary();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [canManageDashboard, summaryReloadKey]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function fetchPurchases() {
+      if (!canManageDashboard) {
+        setPurchases([]);
+        setPurchasesLoading(false);
+        return;
+      }
+
+      setPurchasesLoading(true);
+      setPurchasesError("");
+
+      try {
+        const query = new URLSearchParams({
+          page: String(purchasesPage),
+          perPage: "10",
+          status: purchaseStatusFilter,
+        });
+        const response = await fetch(
+          `${API_BASE_URL}/dashboard/purchases?${query.toString()}`,
+          {
+            credentials: "include",
+            headers: buildAuthHeaders(),
+          },
+        );
+        const payload = await parseResponsePayload(response);
+
+        if (!response.ok) {
+          throw new Error(payload?.message || "Unable to load purchases.");
+        }
+
+        if (!isCancelled) {
+          setPurchases(toArrayPayload(payload));
+          setPurchasesMeta(getPaginationMeta(payload));
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setPurchases([]);
+          setPurchasesError(error.message || "Unable to load purchases.");
+        }
+      } finally {
+        if (!isCancelled) {
+          setPurchasesLoading(false);
+        }
+      }
+    }
+
+    fetchPurchases();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [canManageDashboard, purchaseStatusFilter, purchasesPage, summaryReloadKey]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -360,41 +583,74 @@ function DashboardPage({ language = "fr", onLogout }) {
             addTags: "Ajouter des tags",
             settings: "Paramètres",
           },
-          adminOnlyTitle: "Accès admin requis",
+          adminOnlyTitle: "Accès propriétaire requis",
           adminOnlyBody:
-            "Ton compte est connecté, mais il n'a pas le rôle admin pour ce dashboard.",
+            "Ton compte est connecté, mais il n'a pas accès à ce dashboard propriétaire.",
           overview: {
             cards: {
               purchases: "Achats aujourd'hui",
-              revenue: "CA estimé",
-              tracks: "Musiques en ligne",
-              activeLicenses: "Licences actives",
+              revenue: "CA aujourd'hui",
+              tracks: "Musiques actives",
+              activeLicenses: "Musiques sold",
             },
             recent: "Activité récente",
             recentEmpty: "Aucune activité récente à afficher pour le moment.",
           },
           purchases: {
             title: "Liste des achats",
-            subtitle:
-              "Aperçu des derniers paiements. Tu pourras brancher la vraie route achats ensuite.",
+            subtitle: "Paiements PayPal, acheteurs et licences achetées.",
             empty: "Aucun achat à afficher.",
+            loading: "Chargement des achats...",
+            filters: {
+              all: "Tous",
+              completed: "Payés",
+              failed: "Échecs",
+            },
             columns: {
               orderId: "Commande",
               buyer: "Acheteur",
+              track: "Musique",
+              license: "Licence",
               amount: "Montant",
               status: "Statut",
+              date: "Date",
             },
           },
           tracks: {
             title: "Liste des musiques",
-            subtitle: "Catalogue chargé depuis l'API.",
+            subtitle: "Gère la visibilité, le mode sold et la suppression.",
             loading: "Chargement des musiques...",
             empty: "Aucune musique trouvée.",
+            search: "Rechercher une musique",
+            filters: {
+              all: "Toutes",
+              available: "Disponibles",
+              active: "Visibles",
+              hidden: "Masquées",
+              sold: "Sold",
+            },
+            status: {
+              active: "Visible",
+              hidden: "Masquée",
+              sold: "Sold",
+            },
+            actions: {
+              hide: "Masquer",
+              restore: "Rendre visible",
+              markSold: "Marquer sold",
+              markAvailable: "Remettre dispo",
+              delete: "Supprimer",
+              deleting: "Suppression...",
+              working: "Action...",
+              confirmDelete: "Supprimer définitivement cette musique ?",
+            },
             columns: {
               title: "Titre",
               bpm: "BPM",
               price: "Prix",
               listens: "Écoutes",
+              status: "Statut",
+              actions: "Actions",
             },
           },
           addTrack: {
@@ -478,41 +734,74 @@ function DashboardPage({ language = "fr", onLogout }) {
             addTags: "Add tags",
             settings: "Settings",
           },
-          adminOnlyTitle: "Admin access required",
+          adminOnlyTitle: "Owner access required",
           adminOnlyBody:
-            "Your account is signed in, but it does not have the admin role for this dashboard.",
+            "Your account is signed in, but it does not have access to this owner dashboard.",
           overview: {
             cards: {
               purchases: "Purchases today",
-              revenue: "Estimated revenue",
-              tracks: "Tracks online",
-              activeLicenses: "Active licenses",
+              revenue: "Revenue today",
+              tracks: "Active tracks",
+              activeLicenses: "Sold tracks",
             },
             recent: "Recent activity",
             recentEmpty: "No recent activity to display yet.",
           },
           purchases: {
             title: "Purchases",
-            subtitle:
-              "Preview of recent payments. You can connect your real purchases endpoint next.",
+            subtitle: "PayPal payments, buyers, and purchased licenses.",
             empty: "No purchases to show.",
+            loading: "Loading purchases...",
+            filters: {
+              all: "All",
+              completed: "Paid",
+              failed: "Failed",
+            },
             columns: {
               orderId: "Order",
               buyer: "Buyer",
+              track: "Track",
+              license: "License",
               amount: "Amount",
               status: "Status",
+              date: "Date",
             },
           },
           tracks: {
             title: "Tracks",
-            subtitle: "Catalog loaded from API.",
+            subtitle: "Manage visibility, sold mode, and deletion.",
             loading: "Loading tracks...",
             empty: "No tracks found.",
+            search: "Search track",
+            filters: {
+              all: "All",
+              available: "Available",
+              active: "Visible",
+              hidden: "Hidden",
+              sold: "Sold",
+            },
+            status: {
+              active: "Visible",
+              hidden: "Hidden",
+              sold: "Sold",
+            },
+            actions: {
+              hide: "Hide",
+              restore: "Show",
+              markSold: "Mark sold",
+              markAvailable: "Available",
+              delete: "Delete",
+              deleting: "Deleting...",
+              working: "Working...",
+              confirmDelete: "Permanently delete this track?",
+            },
             columns: {
               title: "Title",
               bpm: "BPM",
               price: "Price",
               listens: "Plays",
+              status: "Status",
+              actions: "Actions",
             },
           },
           addTrack: {
@@ -598,21 +887,7 @@ function DashboardPage({ language = "fr", onLogout }) {
     { id: "settings", label: copy.nav.settings },
   ];
 
-  const isAdmin = storedUser?.role === "admin";
-  const purchasesPreview = [
-    {
-      orderId: "5O190127TN364715T",
-      buyer: "buyer@test.local",
-      amount: "35.00 EUR",
-      status: "COMPLETED",
-    },
-    {
-      orderId: "9N122857A0150042W",
-      buyer: "alpha@test.local",
-      amount: "17.00 EUR",
-      status: "COMPLETED",
-    },
-  ];
+  const summaryStats = summary?.stats ?? {};
 
   function handleFileAssign(zone, file) {
     if (!isAcceptedFileForZone(zone, file)) {
@@ -964,14 +1239,9 @@ function DashboardPage({ language = "fr", onLogout }) {
         );
       }
 
-      const tracksResponse = await fetch(
-        `${API_BASE_URL}/tracks?page=1&perPage=20`,
-      );
-      const tracksPayload = await parseResponsePayload(tracksResponse);
-
-      if (tracksResponse.ok) {
-        setTracks(toArrayPayload(tracksPayload));
-      }
+      setTrackPage(1);
+      setTrackReloadKey((value) => value + 1);
+      setSummaryReloadKey((value) => value + 1);
 
       setTrackForm({
         title: "",
@@ -1007,8 +1277,116 @@ function DashboardPage({ language = "fr", onLogout }) {
     }
   }
 
+  async function patchTrack(track, updates) {
+    if (!isLoggedIn()) {
+      setTrackActionState({
+        id: track.id,
+        error: copy.addTrack.tokenRequired,
+      });
+      return;
+    }
+
+    setTrackActionState({ id: track.id, error: "" });
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/tracks/${track.id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: buildAuthHeaders(undefined, { json: true }),
+        body: JSON.stringify(updates),
+      });
+      const payload = await parseResponsePayload(response);
+
+      if (!response.ok) {
+        throw new Error(payload?.message || "Unable to update track.");
+      }
+
+      setTrackReloadKey((value) => value + 1);
+      setSummaryReloadKey((value) => value + 1);
+      setTrackActionState({ id: null, error: "" });
+    } catch (error) {
+      setTrackActionState({
+        id: track.id,
+        error: error.message || "Unable to update track.",
+      });
+    }
+  }
+
+  async function handleTrackDelete(track) {
+    if (!window.confirm(copy.tracks.actions.confirmDelete)) {
+      return;
+    }
+
+    if (!isLoggedIn()) {
+      setTrackActionState({
+        id: track.id,
+        error: copy.addTrack.tokenRequired,
+      });
+      return;
+    }
+
+    setTrackActionState({ id: track.id, error: "" });
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/tracks/${track.id}`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: buildAuthHeaders(),
+      });
+      const payload = await parseResponsePayload(response);
+
+      if (!response.ok) {
+        throw new Error(payload?.message || "Unable to delete track.");
+      }
+
+      setTrackReloadKey((value) => value + 1);
+      setSummaryReloadKey((value) => value + 1);
+      setTrackActionState({ id: null, error: "" });
+    } catch (error) {
+      setTrackActionState({
+        id: track.id,
+        error: error.message || "Unable to delete track.",
+      });
+    }
+  }
+
+  function renderPagination(meta, onPageChange) {
+    const currentPage = Number(meta?.currentPage || 1);
+    const lastPage = Number(meta?.lastPage || 1);
+
+    if (lastPage <= 1) {
+      return null;
+    }
+
+    return (
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-300">
+        <span>
+          Page {currentPage} / {lastPage}
+        </span>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+            disabled={currentPage <= 1}
+            className="rounded-full border border-white/12 bg-white/5 px-3 py-1.5 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Prev
+          </button>
+          <button
+            type="button"
+            onClick={() => onPageChange(Math.min(lastPage, currentPage + 1))}
+            disabled={currentPage >= lastPage}
+            className="rounded-full border border-white/12 bg-white/5 px-3 py-1.5 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   function renderMainContent() {
-    if (!isAdmin) {
+    if (!canManageDashboard) {
       return (
         <section className="rounded-3xl border border-amber-300/25 bg-amber-400/10 p-6 text-amber-50">
           <h2 className="text-2xl font-black">{copy.adminOnlyTitle}</h2>
@@ -1022,32 +1400,47 @@ function DashboardPage({ language = "fr", onLogout }) {
     if (activeSection === "overview") {
       return (
         <section className="space-y-5">
+          {summaryLoading ? (
+            <p className="text-sm text-slate-300">Chargement du dashboard...</p>
+          ) : null}
+          {summaryError ? (
+            <p className="rounded-2xl border border-rose-300/25 bg-rose-500/10 p-4 text-sm text-rose-100">
+              {summaryError}
+            </p>
+          ) : null}
+
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <article className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
                 {copy.overview.cards.purchases}
               </p>
-              <p className="mt-3 text-2xl font-black text-white">18</p>
+              <p className="mt-3 text-2xl font-black text-white">
+                {summaryStats.purchasesToday ?? 0}
+              </p>
             </article>
             <article className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
                 {copy.overview.cards.revenue}
               </p>
-              <p className="mt-3 text-2xl font-black text-white">420 EUR</p>
+              <p className="mt-3 text-2xl font-black text-white">
+                {formatMoney(summaryStats.revenueTodayCents, "EUR", language)}
+              </p>
             </article>
             <article className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
                 {copy.overview.cards.tracks}
               </p>
               <p className="mt-3 text-2xl font-black text-white">
-                {tracks.length}
+                {summaryStats.activeTracks ?? 0}
               </p>
             </article>
             <article className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
                 {copy.overview.cards.activeLicenses}
               </p>
-              <p className="mt-3 text-2xl font-black text-white">5</p>
+              <p className="mt-3 text-2xl font-black text-white">
+                {summaryStats.soldTracks ?? 0}
+              </p>
             </article>
           </div>
 
@@ -1055,74 +1448,215 @@ function DashboardPage({ language = "fr", onLogout }) {
             <h3 className="text-lg font-semibold text-white">
               {copy.overview.recent}
             </h3>
-            <p className="mt-2 text-sm text-slate-300">
-              {copy.overview.recentEmpty}
-            </p>
+            {summary?.recentPurchases?.length ? (
+              <div className="mt-4 divide-y divide-white/8">
+                {summary.recentPurchases.map((purchase) => (
+                  <div
+                    key={purchase.id}
+                    className="grid gap-2 py-3 text-sm text-slate-200 md:grid-cols-[1fr_auto]"
+                  >
+                    <div>
+                      <p className="font-semibold text-white">
+                        {purchase.trackTitle}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        {purchase.payerEmail || "-"} · {purchase.licenseTitle}
+                      </p>
+                    </div>
+                    <div className="text-left md:text-right">
+                      <p className="font-semibold text-cyan-100">
+                        {formatMoney(
+                          purchase.amountCents,
+                          purchase.currencyCode,
+                          language,
+                        )}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        {formatDateTime(purchase.createdAt, language)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-slate-300">
+                {copy.overview.recentEmpty}
+              </p>
+            )}
           </div>
         </section>
       );
     }
 
     if (activeSection === "purchases") {
+      const purchaseFilters = [
+        ["all", copy.purchases.filters.all],
+        ["COMPLETED", copy.purchases.filters.completed],
+        ["FAILED", copy.purchases.filters.failed],
+      ];
+
       return (
         <section className="rounded-2xl border border-white/10 bg-slate-900/55 p-5">
-          <h2 className="text-2xl font-black text-white">
-            {copy.purchases.title}
-          </h2>
-          <p className="mt-2 text-sm text-slate-300">
-            {copy.purchases.subtitle}
-          </p>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="text-2xl font-black text-white">
+                {copy.purchases.title}
+              </h2>
+              <p className="mt-2 text-sm text-slate-300">
+                {copy.purchases.subtitle}
+              </p>
+            </div>
 
-          {purchasesPreview.length === 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {purchaseFilters.map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => {
+                    setPurchaseStatusFilter(value);
+                    setPurchasesPage(1);
+                  }}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                    purchaseStatusFilter === value
+                      ? "border-cyan-300/35 bg-cyan-400/18 text-cyan-100"
+                      : "border-white/12 bg-white/5 text-slate-200 hover:bg-white/10"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {purchasesLoading ? (
+            <p className="mt-6 text-sm text-slate-300">
+              {copy.purchases.loading}
+            </p>
+          ) : null}
+          {purchasesError ? (
+            <p className="mt-6 rounded-2xl border border-rose-300/25 bg-rose-500/10 p-4 text-sm text-rose-100">
+              {purchasesError}
+            </p>
+          ) : null}
+
+          {!purchasesLoading && !purchasesError && purchases.length === 0 ? (
             <p className="mt-6 text-sm text-slate-300">
               {copy.purchases.empty}
             </p>
-          ) : (
+          ) : null}
+
+          {!purchasesLoading && !purchasesError && purchases.length > 0 ? (
             <div className="mt-6 overflow-x-auto">
-              <table className="w-full min-w-[560px] text-left text-sm text-slate-200">
+              <table className="w-full min-w-[860px] text-left text-sm text-slate-200">
                 <thead className="text-xs uppercase tracking-[0.16em] text-slate-400">
                   <tr>
                     <th className="py-2">{copy.purchases.columns.orderId}</th>
                     <th className="py-2">{copy.purchases.columns.buyer}</th>
+                    <th className="py-2">{copy.purchases.columns.track}</th>
+                    <th className="py-2">{copy.purchases.columns.license}</th>
                     <th className="py-2">{copy.purchases.columns.amount}</th>
                     <th className="py-2">{copy.purchases.columns.status}</th>
+                    <th className="py-2">{copy.purchases.columns.date}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {purchasesPreview.map((purchase) => (
+                  {purchases.map((purchase) => (
                     <tr
-                      key={purchase.orderId}
+                      key={purchase.id}
                       className="border-t border-white/8"
                     >
                       <td className="py-3 font-mono text-xs text-cyan-100">
-                        {purchase.orderId}
+                        {purchase.paypalOrderId || `#${purchase.id}`}
                       </td>
-                      <td className="py-3">{purchase.buyer}</td>
-                      <td className="py-3">{purchase.amount}</td>
+                      <td className="py-3">{purchase.payerEmail || "-"}</td>
+                      <td className="py-3">{purchase.trackTitle}</td>
+                      <td className="py-3">{purchase.licenseTitle}</td>
+                      <td className="py-3">
+                        {formatMoney(
+                          purchase.amountCents,
+                          purchase.currencyCode,
+                          language,
+                        )}
+                      </td>
                       <td className="py-3">{purchase.status}</td>
+                      <td className="py-3">
+                        {formatDateTime(purchase.createdAt, language)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              {renderPagination(purchasesMeta, setPurchasesPage)}
             </div>
-          )}
+          ) : null}
         </section>
       );
     }
 
     if (activeSection === "tracks") {
+      const trackFilters = [
+        ["all", copy.tracks.filters.all],
+        ["available", copy.tracks.filters.available],
+        ["active", copy.tracks.filters.active],
+        ["hidden", copy.tracks.filters.hidden],
+        ["sold", copy.tracks.filters.sold],
+      ];
+
       return (
         <section className="rounded-2xl border border-white/10 bg-slate-900/55 p-5">
-          <h2 className="text-2xl font-black text-white">
-            {copy.tracks.title}
-          </h2>
-          <p className="mt-2 text-sm text-slate-300">{copy.tracks.subtitle}</p>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="text-2xl font-black text-white">
+                {copy.tracks.title}
+              </h2>
+              <p className="mt-2 text-sm text-slate-300">
+                {copy.tracks.subtitle}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {trackFilters.map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => {
+                    setTrackStatusFilter(value);
+                    setTrackPage(1);
+                  }}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                    trackStatusFilter === value
+                      ? "border-cyan-300/35 bg-cyan-400/18 text-cyan-100"
+                      : "border-white/12 bg-white/5 text-slate-200 hover:bg-white/10"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <input
+            value={trackSearch}
+            onChange={(event) => {
+              setTrackSearch(event.target.value);
+              setTrackPage(1);
+            }}
+            placeholder={copy.tracks.search}
+            className="mt-5 w-full rounded-xl border border-white/12 bg-white/5 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500"
+          />
 
           {tracksLoading ? (
             <p className="mt-6 text-sm text-slate-300">{copy.tracks.loading}</p>
           ) : null}
           {tracksError ? (
-            <p className="mt-6 text-sm text-rose-200">{tracksError}</p>
+            <p className="mt-6 rounded-2xl border border-rose-300/25 bg-rose-500/10 p-4 text-sm text-rose-100">
+              {tracksError}
+            </p>
+          ) : null}
+          {trackActionState.error ? (
+            <p className="mt-4 rounded-2xl border border-rose-300/25 bg-rose-500/10 p-4 text-sm text-rose-100">
+              {trackActionState.error}
+            </p>
           ) : null}
 
           {!tracksLoading && !tracksError && tracks.length === 0 ? (
@@ -1131,26 +1665,108 @@ function DashboardPage({ language = "fr", onLogout }) {
 
           {!tracksLoading && !tracksError && tracks.length > 0 ? (
             <div className="mt-6 overflow-x-auto">
-              <table className="w-full min-w-[560px] text-left text-sm text-slate-200">
+              <table className="w-full min-w-[920px] text-left text-sm text-slate-200">
                 <thead className="text-xs uppercase tracking-[0.16em] text-slate-400">
                   <tr>
                     <th className="py-2">{copy.tracks.columns.title}</th>
                     <th className="py-2">{copy.tracks.columns.bpm}</th>
                     <th className="py-2">{copy.tracks.columns.price}</th>
                     <th className="py-2">{copy.tracks.columns.listens}</th>
+                    <th className="py-2">{copy.tracks.columns.status}</th>
+                    <th className="py-2 text-right">
+                      {copy.tracks.columns.actions}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {tracks.map((track) => (
-                    <tr key={track.id} className="border-t border-white/8">
-                      <td className="py-3">{track.title}</td>
-                      <td className="py-3">{track.bpm ?? 0}</td>
-                      <td className="py-3">{track.priceCents ?? 0}</td>
-                      <td className="py-3">{track.listenCount ?? 0}</td>
-                    </tr>
-                  ))}
+                  {tracks.map((track) => {
+                    const isWorking = trackActionState.id === track.id;
+
+                    return (
+                      <tr key={track.id} className="border-t border-white/8">
+                        <td className="py-3">
+                          <div>
+                            <p className="font-semibold text-white">
+                              {track.title}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-400">
+                              {track.musicalKey?.name || "-"}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="py-3">{track.bpm ?? 0}</td>
+                        <td className="py-3">
+                          {formatLicensePrice(track.priceCents)}
+                        </td>
+                        <td className="py-3">{track.listenCount ?? 0}</td>
+                        <td className="py-3">
+                          <div className="flex flex-wrap gap-2">
+                            <span
+                              className={`rounded-full border px-2 py-1 text-xs ${
+                                track.isActive
+                                  ? "border-emerald-300/30 bg-emerald-400/12 text-emerald-100"
+                                  : "border-white/12 bg-white/5 text-slate-300"
+                              }`}
+                            >
+                              {track.isActive
+                                ? copy.tracks.status.active
+                                : copy.tracks.status.hidden}
+                            </span>
+                            {track.isSold ? (
+                              <span className="rounded-full border border-amber-300/30 bg-amber-400/12 px-2 py-1 text-xs text-amber-100">
+                                {copy.tracks.status.sold}
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="py-3">
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <button
+                              type="button"
+                              disabled={isWorking}
+                              onClick={() =>
+                                patchTrack(track, {
+                                  isActive: !track.isActive,
+                                })
+                              }
+                              className="rounded-full border border-white/12 bg-white/5 px-3 py-1.5 text-xs text-slate-100 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {track.isActive
+                                ? copy.tracks.actions.hide
+                                : copy.tracks.actions.restore}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isWorking}
+                              onClick={() =>
+                                patchTrack(track, {
+                                  isSold: !track.isSold,
+                                })
+                              }
+                              className="rounded-full border border-amber-300/25 bg-amber-400/10 px-3 py-1.5 text-xs text-amber-100 transition hover:bg-amber-400/18 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {track.isSold
+                                ? copy.tracks.actions.markAvailable
+                                : copy.tracks.actions.markSold}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isWorking}
+                              onClick={() => handleTrackDelete(track)}
+                              className="rounded-full border border-rose-300/25 bg-rose-400/12 px-3 py-1.5 text-xs text-rose-100 transition hover:bg-rose-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {isWorking
+                                ? copy.tracks.actions.working
+                                : copy.tracks.actions.delete}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+              {renderPagination(tracksMeta, setTrackPage)}
             </div>
           ) : null}
         </section>

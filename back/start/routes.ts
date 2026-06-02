@@ -13,6 +13,7 @@ import fs from 'node:fs/promises'
 import { join } from 'node:path'
 
 const AccessTokenController = () => import('#controllers/access_token_controller')
+const DashboardController = () => import('#controllers/dashboard_controller')
 const LicensesController = () => import('#controllers/licenses_controller')
 const MusicalKeysController = () => import('#controllers/musical_keys_controller')
 const PaypalPaymentsController = () => import('#controllers/paypal_payments_controller')
@@ -64,6 +65,10 @@ router
 
     router
       .group(() => {
+        router.get('dashboard/summary', [DashboardController, 'summary'])
+        router.get('dashboard/purchases', [DashboardController, 'purchases'])
+        router.get('dashboard/tracks', [DashboardController, 'tracks'])
+
         router.post('licenses', [LicensesController, 'store'])
         router.patch('licenses/:id', [LicensesController, 'update'])
         router.delete('licenses/:id', [LicensesController, 'destroy'])

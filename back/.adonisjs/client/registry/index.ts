@@ -90,6 +90,24 @@ const routes = {
     tokens: [{"old":"/api/v1/payments/paypal/orders/:orderId/capture","type":0,"val":"api","end":""},{"old":"/api/v1/payments/paypal/orders/:orderId/capture","type":0,"val":"v1","end":""},{"old":"/api/v1/payments/paypal/orders/:orderId/capture","type":0,"val":"payments","end":""},{"old":"/api/v1/payments/paypal/orders/:orderId/capture","type":0,"val":"paypal","end":""},{"old":"/api/v1/payments/paypal/orders/:orderId/capture","type":0,"val":"orders","end":""},{"old":"/api/v1/payments/paypal/orders/:orderId/capture","type":1,"val":"orderId","end":""},{"old":"/api/v1/payments/paypal/orders/:orderId/capture","type":0,"val":"capture","end":""}],
     types: placeholder as Registry['catalog.paypal_payments.capture_order']['types'],
   },
+  'catalog.manage.dashboard.summary': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/dashboard/summary',
+    tokens: [{"old":"/api/v1/dashboard/summary","type":0,"val":"api","end":""},{"old":"/api/v1/dashboard/summary","type":0,"val":"v1","end":""},{"old":"/api/v1/dashboard/summary","type":0,"val":"dashboard","end":""},{"old":"/api/v1/dashboard/summary","type":0,"val":"summary","end":""}],
+    types: placeholder as Registry['catalog.manage.dashboard.summary']['types'],
+  },
+  'catalog.manage.dashboard.purchases': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/dashboard/purchases',
+    tokens: [{"old":"/api/v1/dashboard/purchases","type":0,"val":"api","end":""},{"old":"/api/v1/dashboard/purchases","type":0,"val":"v1","end":""},{"old":"/api/v1/dashboard/purchases","type":0,"val":"dashboard","end":""},{"old":"/api/v1/dashboard/purchases","type":0,"val":"purchases","end":""}],
+    types: placeholder as Registry['catalog.manage.dashboard.purchases']['types'],
+  },
+  'catalog.manage.dashboard.tracks': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/dashboard/tracks',
+    tokens: [{"old":"/api/v1/dashboard/tracks","type":0,"val":"api","end":""},{"old":"/api/v1/dashboard/tracks","type":0,"val":"v1","end":""},{"old":"/api/v1/dashboard/tracks","type":0,"val":"dashboard","end":""},{"old":"/api/v1/dashboard/tracks","type":0,"val":"tracks","end":""}],
+    types: placeholder as Registry['catalog.manage.dashboard.tracks']['types'],
+  },
   'catalog.manage.licenses.store': {
     methods: ["POST"],
     pattern: '/api/v1/licenses',

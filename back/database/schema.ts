@@ -8,18 +8,7 @@ import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 
 export class AuthAccessTokenSchema extends BaseModel {
-  static $columns = [
-    'abilities',
-    'createdAt',
-    'expiresAt',
-    'hash',
-    'id',
-    'lastUsedAt',
-    'name',
-    'tokenableId',
-    'type',
-    'updatedAt',
-  ] as const
+  static $columns = ['abilities', 'createdAt', 'expiresAt', 'hash', 'id', 'lastUsedAt', 'name', 'tokenableId', 'type', 'updatedAt'] as const
   $columns = AuthAccessTokenSchema.$columns
   @column()
   declare abilities: string
@@ -44,81 +33,142 @@ export class AuthAccessTokenSchema extends BaseModel {
 }
 
 export class LicenseSchema extends BaseModel {
-  static $columns = [
-    'additionalTerms',
-    'allowContentId',
-    'allowLivePerformance',
-    'allowMonetization',
-    'allowRadioAirplay',
-    'allowRemix',
-    'allowTelevision',
-    'allowVideoClips',
-    'audioFormats',
-    'createdAt',
-    'description',
-    'id',
-    'isActive',
-    'isPaypalEnabled',
-    'isTemplate',
-    'maxSales',
-    'maxStreams',
-    'priceCents',
-    'radioStations',
-    'sortOrder',
-    'templateCategory',
-    'title',
-    'trackSeparation',
-    'updatedAt',
-    'userId',
-    'videoClipsLimit',
-  ] as const
+  static $columns = ['additionalTerms', 'allowAdultContent', 'allowCommercialUse', 'allowContentId', 'allowEducationalUse', 'allowGamblingUse', 'allowLivePerformance', 'allowMechanicalRepro', 'allowMilitaryUse', 'allowMonetization', 'allowNonprofitUse', 'allowOfflineListening', 'allowPodcast', 'allowPoliticalUse', 'allowRadioAirplay', 'allowReligiousUse', 'allowRemix', 'allowRemixDistribution', 'allowSampling', 'allowStreaming', 'allowSublicense', 'allowTelevision', 'allowTrackModification', 'allowTransfer', 'allowVideoClips', 'allowedPlatforms', 'allowedTerritories', 'audioFormats', 'commercialUseDescription', 'commercialUseLimit', 'createdAt', 'creditRequirements', 'description', 'durationMonths', 'id', 'isActive', 'isExclusive', 'isPaypalEnabled', 'isTemplate', 'licenseEndDate', 'licenseStartDate', 'masterSplitPercentage', 'maxConcurrentStreams', 'maxDownloads', 'maxSales', 'maxStreams', 'minAudioBitrate', 'modificationRestrictions', 'priceCents', 'publishingSplitPercentage', 'radioStations', 'requireApprovalForModification', 'requireArtistCredit', 'requireDrmEncryption', 'requireMasterCredit', 'requirePublishingCredit', 'requiresWrittenAgreement', 'restrictedGenres', 'restrictedUseCases', 'revisionDate', 'revisionNotes', 'sortOrder', 'templateCategory', 'thirdPartySplitPercentage', 'title', 'trackSeparation', 'transferRestrictions', 'updatedAt', 'userId', 'videoClipsLimit'] as const
   $columns = LicenseSchema.$columns
   @column()
   declare additionalTerms: string | null
   @column()
+  declare allowAdultContent: boolean
+  @column()
+  declare allowCommercialUse: boolean
+  @column()
   declare allowContentId: boolean
+  @column()
+  declare allowEducationalUse: boolean
+  @column()
+  declare allowGamblingUse: boolean
   @column()
   declare allowLivePerformance: boolean
   @column()
+  declare allowMechanicalRepro: boolean
+  @column()
+  declare allowMilitaryUse: boolean
+  @column()
   declare allowMonetization: boolean
+  @column()
+  declare allowNonprofitUse: boolean
+  @column()
+  declare allowOfflineListening: boolean
+  @column()
+  declare allowPodcast: boolean
+  @column()
+  declare allowPoliticalUse: boolean
   @column()
   declare allowRadioAirplay: boolean
   @column()
+  declare allowReligiousUse: boolean
+  @column()
   declare allowRemix: boolean
+  @column()
+  declare allowRemixDistribution: boolean
+  @column()
+  declare allowSampling: boolean
+  @column()
+  declare allowStreaming: boolean
+  @column()
+  declare allowSublicense: boolean
   @column()
   declare allowTelevision: boolean
   @column()
+  declare allowTrackModification: boolean
+  @column()
+  declare allowTransfer: boolean
+  @column()
   declare allowVideoClips: boolean
   @column()
+  declare allowedPlatforms: any | null
+  @column()
+  declare allowedTerritories: any | null
+  @column()
   declare audioFormats: any | null
+  @column()
+  declare commercialUseDescription: string | null
+  @column()
+  declare commercialUseLimit: string | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
+  declare creditRequirements: string | null
+  @column()
   declare description: string | null
+  @column()
+  declare durationMonths: number | null
   @column({ isPrimary: true })
   declare id: number
   @column()
   declare isActive: boolean
   @column()
+  declare isExclusive: boolean
+  @column()
   declare isPaypalEnabled: boolean
   @column()
   declare isTemplate: boolean
+  @column.dateTime()
+  declare licenseEndDate: DateTime | null
+  @column.dateTime()
+  declare licenseStartDate: DateTime | null
+  @column()
+  declare masterSplitPercentage: string
+  @column()
+  declare maxConcurrentStreams: number | null
+  @column()
+  declare maxDownloads: bigint | number | null
   @column()
   declare maxSales: bigint | number | null
   @column()
   declare maxStreams: bigint | number | null
   @column()
+  declare minAudioBitrate: string | null
+  @column()
+  declare modificationRestrictions: string | null
+  @column()
   declare priceCents: number
   @column()
+  declare publishingSplitPercentage: string
+  @column()
   declare radioStations: number | null
+  @column()
+  declare requireApprovalForModification: boolean
+  @column()
+  declare requireArtistCredit: boolean
+  @column()
+  declare requireDrmEncryption: boolean
+  @column()
+  declare requireMasterCredit: boolean
+  @column()
+  declare requirePublishingCredit: boolean
+  @column()
+  declare requiresWrittenAgreement: boolean
+  @column()
+  declare restrictedGenres: string | null
+  @column()
+  declare restrictedUseCases: string | null
+  @column.dateTime()
+  declare revisionDate: DateTime | null
+  @column()
+  declare revisionNotes: string | null
   @column()
   declare sortOrder: number
   @column()
   declare templateCategory: string | null
   @column()
+  declare thirdPartySplitPercentage: string
+  @column()
   declare title: string
   @column()
   declare trackSeparation: string | null
+  @column()
+  declare transferRestrictions: string | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
   @column()
@@ -143,27 +193,7 @@ export class MusicalKeySchema extends BaseModel {
 }
 
 export class PaymentOrderSchema extends BaseModel {
-  static $columns = [
-    'amountCents',
-    'capturePayload',
-    'createdAt',
-    'currencyCode',
-    'errorPayload',
-    'id',
-    'licenseId',
-    'licenseIdSnapshot',
-    'licenseTitleSnapshot',
-    'orderPayload',
-    'payerEmail',
-    'paypalCaptureId',
-    'paypalOrderId',
-    'provider',
-    'requestPayload',
-    'status',
-    'trackId',
-    'trackTitleSnapshot',
-    'updatedAt',
-  ] as const
+  static $columns = ['amountCents', 'capturePayload', 'createdAt', 'currencyCode', 'errorPayload', 'id', 'licenseId', 'licenseIdSnapshot', 'licenseTitleSnapshot', 'orderPayload', 'payerEmail', 'paypalCaptureId', 'paypalOrderId', 'provider', 'requestPayload', 'status', 'trackId', 'trackTitleSnapshot', 'updatedAt'] as const
   $columns = PaymentOrderSchema.$columns
   @column()
   declare amountCents: number
@@ -223,14 +253,7 @@ export class TagSchema extends BaseModel {
 }
 
 export class TrackLicenseSchema extends BaseModel {
-  static $columns = [
-    'createdAt',
-    'isActive',
-    'licenseId',
-    'priceCents',
-    'trackId',
-    'updatedAt',
-  ] as const
+  static $columns = ['createdAt', 'isActive', 'licenseId', 'priceCents', 'trackId', 'updatedAt'] as const
   $columns = TrackLicenseSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -260,21 +283,7 @@ export class TrackTagSchema extends BaseModel {
 }
 
 export class TrackSchema extends BaseModel {
-  static $columns = [
-    'audioFilePath',
-    'bpm',
-    'coverImagePath',
-    'createdAt',
-    'durationSeconds',
-    'id',
-    'listenCount',
-    'musicalKeyId',
-    'priceCents',
-    'title',
-    'updatedAt',
-    'waveFilePath',
-    'zipFilePath',
-  ] as const
+  static $columns = ['audioFilePath', 'bpm', 'coverImagePath', 'createdAt', 'durationSeconds', 'id', 'isActive', 'isSold', 'listenCount', 'musicalKeyId', 'priceCents', 'soldAt', 'title', 'updatedAt', 'waveFilePath', 'zipFilePath'] as const
   $columns = TrackSchema.$columns
   @column()
   declare audioFilePath: string | null
@@ -289,11 +298,17 @@ export class TrackSchema extends BaseModel {
   @column({ isPrimary: true })
   declare id: number
   @column()
+  declare isActive: boolean
+  @column()
+  declare isSold: boolean
+  @column()
   declare listenCount: number
   @column()
   declare musicalKeyId: number | null
   @column()
   declare priceCents: number
+  @column.dateTime()
+  declare soldAt: DateTime | null
   @column()
   declare title: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
@@ -305,15 +320,7 @@ export class TrackSchema extends BaseModel {
 }
 
 export class UserSchema extends BaseModel {
-  static $columns = [
-    'createdAt',
-    'email',
-    'fullName',
-    'id',
-    'password',
-    'role',
-    'updatedAt',
-  ] as const
+  static $columns = ['createdAt', 'email', 'fullName', 'id', 'password', 'role', 'updatedAt'] as const
   $columns = UserSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime

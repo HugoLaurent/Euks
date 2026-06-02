@@ -237,6 +237,9 @@ function adaptTrack(track, language, durationOverrides) {
     bpm: track.bpm ?? 0,
     price: formatPrice(track.priceCents, language),
     priceCents: track.priceCents,
+    isActive: track.isActive ?? true,
+    isSold: Boolean(track.isSold),
+    soldAt: track.soldAt ?? null,
     cover: pickCoverGradient(track.id || 0),
     coverImage,
     audioSrc,
@@ -606,20 +609,28 @@ export function adaptCatalogTracks(tracks, language, durationOverrides = {}) {
     const attachedLicenses = Array.isArray(track.licenses)
       ? track.licenses
       : [];
-    const licenseCards = adaptLicensesToPurchaseCards(
-      attachedLicenses,
-      language,
-    );
+    const licenseCards = track.isSold
+      ? []
+      : adaptLicensesToPurchaseCards(attachedLicenses, language);
     const lowestLicenseCard = getLowestPricedLicenseCard(licenseCards);
     const adaptedTrack = adaptTrack(track, language, durationOverrides);
+    const soldLabel = language === "fr" ? "Vendu" : "Sold";
 
     return {
       ...adaptedTrack,
-      price: lowestLicenseCard?.displayPrice ?? adaptedTrack.price,
+      price: track.isSold
+        ? soldLabel
+        : lowestLicenseCard?.displayPrice ?? adaptedTrack.price,
       displayPriceCents:
-        lowestLicenseCard?.priceCents ?? adaptedTrack.priceCents,
+        track.isSold
+          ? null
+          : lowestLicenseCard?.priceCents ?? adaptedTrack.priceCents,
       licenseCards,
-      licenseError: "",
+      licenseError: track.isSold
+        ? language === "fr"
+          ? "Cette musique est vendue et n'est plus disponible a l'achat."
+          : "This track is sold and is no longer available for purchase."
+        : "",
     };
   });
 }

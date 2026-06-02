@@ -69,6 +69,19 @@ export default class PaypalPaymentsController {
       return this.errorResponse(response, 404, 'Track not found', 'TRACK_NOT_FOUND')
     }
 
+    if (resolution.kind === 'track_unavailable') {
+      return this.errorResponse(
+        response,
+        409,
+        'This track is not available for purchase',
+        'TRACK_NOT_AVAILABLE'
+      )
+    }
+
+    if (resolution.kind === 'track_sold') {
+      return this.errorResponse(response, 409, 'This track has already been sold', 'TRACK_SOLD')
+    }
+
     if (resolution.kind === 'license_invalid') {
       return this.errorResponse(response, 422, 'Invalid license', 'LICENSE_INVALID')
     }

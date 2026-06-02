@@ -36,6 +36,11 @@ export interface ApiDefinition {
       captureOrder: typeof routes['catalog.paypal_payments.capture_order']
     }
     manage: {
+      dashboard: {
+        summary: typeof routes['catalog.manage.dashboard.summary']
+        purchases: typeof routes['catalog.manage.dashboard.purchases']
+        tracks: typeof routes['catalog.manage.dashboard.tracks']
+      }
       licenses: {
         store: typeof routes['catalog.manage.licenses.store']
         update: typeof routes['catalog.manage.licenses.update']

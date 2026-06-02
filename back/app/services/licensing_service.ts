@@ -3,6 +3,8 @@ import Track from '#models/track'
 
 export type CheckoutLicenseResolution =
   | { kind: 'track_not_found' }
+  | { kind: 'track_unavailable'; track: Track }
+  | { kind: 'track_sold'; track: Track }
   | { kind: 'license_invalid' }
   | { kind: 'license_unavailable'; license: License }
   | {
@@ -24,6 +26,14 @@ export async function resolveCheckoutLicense(
   const track = await Track.find(trackId)
   if (!track) {
     return { kind: 'track_not_found' }
+  }
+
+  if (!track.isActive) {
+    return { kind: 'track_unavailable', track }
+  }
+
+  if (track.isSold) {
+    return { kind: 'track_sold', track }
   }
 
   const license = await License.find(licenseId)

@@ -1,6 +1,7 @@
 import { Share2, ShoppingCart } from "lucide-react";
 
 function TrackRow({ isActive, labels, onPurchase, onSelect, track }) {
+  const isPurchaseDisabled = Boolean(track.isSold);
   const coverStyle = track.coverImage
     ? {
         backgroundImage: `linear-gradient(rgba(15,23,42,0.16), rgba(15,23,42,0.45)), url(${track.coverImage})`,
@@ -85,12 +86,17 @@ function TrackRow({ isActive, labels, onPurchase, onSelect, track }) {
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
-                  onPurchase(track);
+                  if (!isPurchaseDisabled) {
+                    onPurchase(track);
+                  }
                 }}
+                disabled={isPurchaseDisabled}
                 className={`rounded-full px-2.5 py-1 font-semibold transition ${
-                  isActive
-                    ? "bg-slate-900/10 text-slate-700"
-                    : "bg-white/10 text-cyan-100"
+                  isPurchaseDisabled
+                    ? "cursor-not-allowed bg-amber-400/15 text-amber-100"
+                    : isActive
+                      ? "bg-slate-900/10 text-slate-700"
+                      : "bg-white/10 text-cyan-100"
                 }`}
                 aria-label={`Buy ${track.title}`}
                 title={`Buy ${track.title}`}

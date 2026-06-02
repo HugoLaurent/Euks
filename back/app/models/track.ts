@@ -39,6 +39,15 @@ export default class Track extends BaseModel {
   @column({ columnName: 'listen_count' })
   declare listenCount: number
 
+  @column({ columnName: 'is_active' })
+  declare isActive: boolean
+
+  @column({ columnName: 'is_sold' })
+  declare isSold: boolean
+
+  @column.dateTime({ columnName: 'sold_at' })
+  declare soldAt: DateTime | null
+
   @belongsTo(() => MusicalKey)
   declare musicalKey: BelongsTo<typeof MusicalKey>
 

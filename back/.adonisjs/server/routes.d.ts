@@ -18,6 +18,9 @@ export type ScannedRoutes = {
     'catalog.paypal_payments.config': { paramsTuple?: []; params?: {} }
     'catalog.paypal_payments.create_order': { paramsTuple?: []; params?: {} }
     'catalog.paypal_payments.capture_order': { paramsTuple: [ParamValue]; params: {'orderId': ParamValue} }
+    'catalog.manage.dashboard.summary': { paramsTuple?: []; params?: {} }
+    'catalog.manage.dashboard.purchases': { paramsTuple?: []; params?: {} }
+    'catalog.manage.dashboard.tracks': { paramsTuple?: []; params?: {} }
     'catalog.manage.licenses.store': { paramsTuple?: []; params?: {} }
     'catalog.manage.licenses.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'catalog.manage.licenses.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -44,6 +47,9 @@ export type ScannedRoutes = {
     'catalog.tracks.index': { paramsTuple?: []; params?: {} }
     'catalog.tracks.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'catalog.paypal_payments.config': { paramsTuple?: []; params?: {} }
+    'catalog.manage.dashboard.summary': { paramsTuple?: []; params?: {} }
+    'catalog.manage.dashboard.purchases': { paramsTuple?: []; params?: {} }
+    'catalog.manage.dashboard.tracks': { paramsTuple?: []; params?: {} }
     'catalog.manage.track_licenses.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   HEAD: {
@@ -57,6 +63,9 @@ export type ScannedRoutes = {
     'catalog.tracks.index': { paramsTuple?: []; params?: {} }
     'catalog.tracks.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'catalog.paypal_payments.config': { paramsTuple?: []; params?: {} }
+    'catalog.manage.dashboard.summary': { paramsTuple?: []; params?: {} }
+    'catalog.manage.dashboard.purchases': { paramsTuple?: []; params?: {} }
+    'catalog.manage.dashboard.tracks': { paramsTuple?: []; params?: {} }
     'catalog.manage.track_licenses.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   POST: {

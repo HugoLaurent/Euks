@@ -7,6 +7,7 @@ import { createTrackValidator, updateTrackValidator } from '#validators/track'
 import app from '@adonisjs/core/services/app'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { MultipartFile } from '@adonisjs/bodyparser/types'
+import { DateTime } from 'luxon'
 import { randomUUID } from 'node:crypto'
 import { mkdir } from 'node:fs/promises'
 
@@ -21,6 +22,8 @@ type TrackMutationPayload = {
   musicalKeyId?: number | null
   priceCents?: number
   listenCount?: number
+  isActive?: boolean
+  isSold?: boolean
   tagIds?: number[]
 }
 
@@ -193,6 +196,9 @@ export default class TracksController {
       musicalKeyId: payload.musicalKeyId ?? null,
       priceCents: payload.priceCents,
       listenCount: payload.listenCount ?? 0,
+      isActive: payload.isActive ?? true,
+      isSold: payload.isSold ?? false,
+      soldAt: payload.isSold ? DateTime.now() : null,
     })
 
     if (payload.tagIds) {
@@ -312,6 +318,13 @@ export default class TracksController {
       ...(payload.musicalKeyId !== undefined ? { musicalKeyId: payload.musicalKeyId } : {}),
       ...(payload.priceCents !== undefined ? { priceCents: payload.priceCents } : {}),
       ...(payload.listenCount !== undefined ? { listenCount: payload.listenCount } : {}),
+      ...(payload.isActive !== undefined ? { isActive: payload.isActive } : {}),
+      ...(payload.isSold !== undefined
+        ? {
+            isSold: payload.isSold,
+            soldAt: payload.isSold ? (track.soldAt ?? DateTime.now()) : null,
+          }
+        : {}),
     })
 
     await track.save()
@@ -336,6 +349,7 @@ export default class TracksController {
 
   private baseQuery() {
     return Track.query()
+      .where('is_active', true)
       .preload('licenses', (query) => {
         query
           .where('licenses.is_active', true)
