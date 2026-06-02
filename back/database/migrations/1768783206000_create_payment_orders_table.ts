@@ -22,7 +22,7 @@ export default class extends BaseSchema {
         .inTable('licenses')
         .onDelete('SET NULL')
       table.string('track_title_snapshot', 255).notNullable()
-      table.string('license_key_snapshot', 80).notNullable()
+      table.integer('license_id_snapshot').nullable()
       table.string('license_title_snapshot', 160).notNullable()
       table.integer('amount_cents').notNullable()
       table.string('currency_code', 3).notNullable()

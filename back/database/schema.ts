@@ -33,7 +33,7 @@ export class AuthAccessTokenSchema extends BaseModel {
 }
 
 export class LicenseSchema extends BaseModel {
-  static $columns = ['additionalTerms', 'allowAdultContent', 'allowCommercialUse', 'allowContentId', 'allowEducationalUse', 'allowGamblingUse', 'allowLivePerformance', 'allowMechanicalRepro', 'allowMilitaryUse', 'allowMonetization', 'allowNonprofitUse', 'allowOfflineListening', 'allowPodcast', 'allowPoliticalUse', 'allowRadioAirplay', 'allowReligiousUse', 'allowRemix', 'allowRemixDistribution', 'allowSampling', 'allowStreaming', 'allowSublicense', 'allowTelevision', 'allowTrackModification', 'allowTransfer', 'allowVideoClips', 'allowedPlatforms', 'allowedTerritories', 'audioFormats', 'commercialUseDescription', 'commercialUseLimit', 'createdAt', 'creditRequirements', 'description', 'durationMonths', 'id', 'isActive', 'isExclusive', 'isPaypalEnabled', 'isTemplate', 'licenseEndDate', 'licenseStartDate', 'masterSplitPercentage', 'maxConcurrentStreams', 'maxDownloads', 'maxSales', 'maxStreams', 'minAudioBitrate', 'modificationRestrictions', 'publishingSplitPercentage', 'requireApprovalForModification', 'requireArtistCredit', 'requireDrmEncryption', 'requireMasterCredit', 'requirePublishingCredit', 'requiresWrittenAgreement', 'restrictedGenres', 'restrictedUseCases', 'revisionDate', 'revisionNotes', 'sortOrder', 'templateCategory', 'thirdPartySplitPercentage', 'title', 'trackSeparation', 'transferRestrictions', 'updatedAt', 'userId', 'videoClipsLimit'] as const
+  static $columns = ['additionalTerms', 'allowAdultContent', 'allowCommercialUse', 'allowContentId', 'allowEducationalUse', 'allowGamblingUse', 'allowLivePerformance', 'allowMechanicalRepro', 'allowMilitaryUse', 'allowMonetization', 'allowNonprofitUse', 'allowOfflineListening', 'allowPodcast', 'allowPoliticalUse', 'allowRadioAirplay', 'allowReligiousUse', 'allowRemix', 'allowRemixDistribution', 'allowSampling', 'allowStreaming', 'allowSublicense', 'allowTelevision', 'allowTrackModification', 'allowTransfer', 'allowVideoClips', 'allowedPlatforms', 'allowedTerritories', 'audioFormats', 'commercialUseDescription', 'commercialUseLimit', 'createdAt', 'creditRequirements', 'description', 'durationMonths', 'id', 'isActive', 'isExclusive', 'isPaypalEnabled', 'isTemplate', 'licenseEndDate', 'licenseStartDate', 'masterSplitPercentage', 'maxConcurrentStreams', 'maxDownloads', 'maxSales', 'maxStreams', 'minAudioBitrate', 'modificationRestrictions', 'priceCents', 'publishingSplitPercentage', 'requireApprovalForModification', 'requireArtistCredit', 'requireDrmEncryption', 'requireMasterCredit', 'requirePublishingCredit', 'requiresWrittenAgreement', 'restrictedGenres', 'restrictedUseCases', 'revisionDate', 'revisionNotes', 'sortOrder', 'templateCategory', 'thirdPartySplitPercentage', 'title', 'trackSeparation', 'transferRestrictions', 'updatedAt', 'userId', 'videoClipsLimit'] as const
   $columns = LicenseSchema.$columns
   @column()
   declare additionalTerms: string | null
@@ -131,6 +131,8 @@ export class LicenseSchema extends BaseModel {
   declare minAudioBitrate: string | null
   @column()
   declare modificationRestrictions: string | null
+  @column()
+  declare priceCents: number
   @column()
   declare publishingSplitPercentage: string
   @column()
