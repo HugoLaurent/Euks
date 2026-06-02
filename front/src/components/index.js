@@ -1,4 +1,4 @@
-export { default as AdvancedLicenseManager } from "./AdvancedLicenseManager.jsx";
+export { default as LicenseManager } from "./LicenseManager.jsx";
 export { default as DashboardPage } from "./DashboardPage.jsx";
 export { default as LoginPage } from "./LoginPage.jsx";
 export { default as PayPalSandboxCheckout } from "./PayPalSandboxCheckout.jsx";

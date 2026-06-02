@@ -1,380 +1,107 @@
-import { BaseSeeder } from '@adonisjs/lucid/seeders'
 import License from '#models/license'
+import { BaseSeeder } from '@adonisjs/lucid/seeders'
 
 export default class extends BaseSeeder {
   async run() {
-    // Effacer les licenses existantes
     await License.query().delete()
 
-    // Valeurs alignées sur les paliers BeatStars affichés dans le checkout :
-    // copies (maxSales), streams (maxStreams), clips (videoClipsLimit),
-    // stations radio (radioStations), formats livrés (audioFormats + stems).
-    // null = illimité.
-
-    // === BASIC - MP3 ===
-    await License.create({
-      title: 'Basic License',
-      description: 'Entry-level license for demos, social media & light commercial use.',
-      isPaypalEnabled: true,
-      isActive: true,
-      sortOrder: 10,
-      priceCents: 999,
-      isTemplate: true,
-      templateCategory: 'standard',
-
-      audioFormats: ['mp3'],
-      trackSeparation: 'full_mix',
-
-      maxStreams: 500000,
-      maxDownloads: 1000,
-      maxSales: 2000,
-      radioStations: 2,
-
-      allowVideoClips: true,
-      videoClipsLimit: 1,
-      allowedPlatforms: ['tiktok', 'instagram', 'youtube'],
-
-      allowLivePerformance: true,
-      allowRadioAirplay: true,
-      allowTelevision: false,
-      allowStreaming: true,
-      allowPodcast: false,
-      allowMechanicalRepro: false,
-      allowRemix: false,
-      allowRemixDistribution: false,
-      allowSampling: false,
-      allowMonetization: false,
-      allowContentId: false,
-
-      isExclusive: false,
-      allowCommercialUse: true,
-      commercialUseLimit: 'limited',
-      commercialUseDescription: 'For personal & small business use only. Revenue cap: $50k/year.',
-
-      allowedTerritories: ['WORLDWIDE'],
-      durationMonths: null,
-
-      allowTransfer: false,
-      allowSublicense: false,
-
-      requireMasterCredit: true,
-      requirePublishingCredit: true,
-      requireArtistCredit: true,
-      creditRequirements: '[Artist] - [Track] (euks.io)',
-
-      masterSplitPercentage: 0,
-      publishingSplitPercentage: 0,
-      thirdPartySplitPercentage: 0,
-
-      minAudioBitrate: '128',
-      requireDrmEncryption: false,
-      allowOfflineListening: false,
-
-      allowNonprofitUse: true,
-      allowEducationalUse: true,
-      allowReligiousUse: true,
-      allowPoliticalUse: false,
-      allowAdultContent: true,
-      allowGamblingUse: false,
-      allowMilitaryUse: false,
-
-      additionalTerms:
-        'Suitable for TikTok, Instagram, YouTube Shorts. Cannot monetize via YouTube Partner Program.',
-    })
-
-    // === PREMIUM - WAV & MP3 ===
-    await License.create({
-      title: 'Premium License',
-      description: 'Extended commercial license with broader usage scope including monetization.',
-      isPaypalEnabled: true,
-      isActive: true,
-      sortOrder: 20,
-      priceCents: 1999,
-      isTemplate: true,
-      templateCategory: 'standard',
-
-      audioFormats: ['mp3', 'wav'],
-      trackSeparation: 'full_mix',
-
-      maxStreams: 500000,
-      maxDownloads: null,
-      maxSales: 3000,
-      radioStations: 2,
-
-      allowVideoClips: true,
-      videoClipsLimit: 1,
-      allowedPlatforms: ['tiktok', 'youtube', 'instagram', 'twitch', 'facebook'],
-
-      allowLivePerformance: true,
-      allowRadioAirplay: true,
-      allowTelevision: false,
-      allowStreaming: true,
-      allowPodcast: true,
-      allowMechanicalRepro: false,
-      allowRemix: false,
-      allowRemixDistribution: false,
-      allowSampling: false,
-      allowMonetization: true,
-      allowContentId: true,
-
-      isExclusive: false,
-      allowCommercialUse: true,
-      commercialUseLimit: 'unlimited',
-
-      allowedTerritories: ['WORLDWIDE'],
-      durationMonths: null,
-
-      allowTransfer: false,
-      allowSublicense: false,
-
-      requireMasterCredit: true,
-      requirePublishingCredit: true,
-      requireArtistCredit: true,
-      creditRequirements: '[Artist] - [Track] (euks.io)',
-
-      masterSplitPercentage: 70,
-      publishingSplitPercentage: 15,
-      thirdPartySplitPercentage: 15,
-
-      minAudioBitrate: '192',
-      requireDrmEncryption: false,
-      allowOfflineListening: false,
-      maxConcurrentStreams: null,
-
-      allowTrackModification: false,
-      allowNonprofitUse: true,
-      allowEducationalUse: true,
-      allowReligiousUse: true,
-      allowPoliticalUse: false,
-      allowAdultContent: true,
-      allowGamblingUse: false,
-      allowMilitaryUse: false,
-
-      additionalTerms:
-        'Full monetization rights. YouTube Content ID eligible. Suitable for all digital platforms.',
-    })
-
-    // === PREMIUM PLUS - WAV, STEMS & MP3 ===
-    await License.create({
-      title: 'Premium Plus License',
-      description:
-        'High-tier license with extended rights including remixes, live performances & exclusivity options.',
-      isPaypalEnabled: true,
-      isActive: true,
-      sortOrder: 30,
-      priceCents: 3499,
-      isTemplate: true,
-      templateCategory: 'premium',
-
-      audioFormats: ['mp3', 'wav'],
-      trackSeparation: 'stems',
-
-      maxStreams: 500000,
-      maxDownloads: null,
-      maxSales: 10000,
-      radioStations: 2,
-
-      allowVideoClips: true,
-      videoClipsLimit: 1,
-      allowedPlatforms: ['tiktok', 'youtube', 'instagram', 'twitch', 'facebook', 'snapchat'],
-
-      allowLivePerformance: true,
-      allowRadioAirplay: true,
-      allowTelevision: false,
-      allowStreaming: true,
-      allowPodcast: true,
-      allowMechanicalRepro: true,
-      allowRemix: true,
-      allowRemixDistribution: true,
-      allowSampling: false,
-      allowMonetization: true,
-      allowContentId: true,
-
-      isExclusive: false,
-      allowCommercialUse: true,
-      commercialUseLimit: 'unlimited',
-
-      allowedTerritories: ['WORLDWIDE'],
-      durationMonths: null,
-
-      allowTransfer: true,
-      allowSublicense: true,
-      transferRestrictions: 'Requires written notice to original licensor.',
-
-      requireMasterCredit: true,
-      requirePublishingCredit: true,
-      requireArtistCredit: true,
-      creditRequirements: '[Artist] - [Track Remix] by [Remixer] (euks.io)',
-
-      masterSplitPercentage: 60,
-      publishingSplitPercentage: 25,
-      thirdPartySplitPercentage: 15,
-
-      minAudioBitrate: '320',
-      requireDrmEncryption: false,
-      allowOfflineListening: true,
-      maxConcurrentStreams: null,
-
-      allowTrackModification: true,
-      requireApprovalForModification: false,
-      modificationRestrictions: 'No destructive edits to original artist intent.',
-
-      allowNonprofitUse: true,
-      allowEducationalUse: true,
-      allowReligiousUse: true,
-      allowPoliticalUse: false,
-      allowAdultContent: true,
-      allowGamblingUse: false,
-      allowMilitaryUse: false,
-
-      additionalTerms:
-        'Includes stems for production use. Full remix rights with proper credit. Live performance allowed. Can be sublicensed to derivative works.',
-    })
-
-    // === UNLIMITED - WAV, STEMS & MP3 ===
-    await License.create({
-      title: 'Unlimited License',
-      description:
-        'Wide-open commercial license for projects with no practical ceiling. Nearly all rights included.',
-      isPaypalEnabled: true,
-      isActive: true,
-      sortOrder: 40,
-      priceCents: 4999,
-      isTemplate: true,
-      templateCategory: 'premium',
-
-      audioFormats: ['mp3', 'wav'],
-      trackSeparation: 'stems',
-
-      maxStreams: null,
-      maxDownloads: null,
-      maxSales: null,
-      radioStations: 2,
-
-      allowVideoClips: true,
-      videoClipsLimit: 1,
-      allowedPlatforms: ['tiktok', 'youtube', 'instagram', 'twitch', 'facebook', 'snapchat'],
-
-      allowLivePerformance: true,
-      allowRadioAirplay: true,
-      allowTelevision: true,
-      allowStreaming: true,
-      allowPodcast: true,
-      allowMechanicalRepro: true,
-      allowRemix: true,
-      allowRemixDistribution: true,
-      allowSampling: true,
-      allowMonetization: true,
-      allowContentId: true,
-
-      isExclusive: false,
-      allowCommercialUse: true,
-      commercialUseLimit: 'unlimited',
-
-      allowedTerritories: ['WORLDWIDE'],
-      durationMonths: null,
-
-      allowTransfer: true,
-      allowSublicense: true,
-
-      requireMasterCredit: true,
-      requirePublishingCredit: true,
-      requireArtistCredit: true,
-      creditRequirements: '[Artist] - [Track] (euks.io)',
-
-      masterSplitPercentage: 50,
-      publishingSplitPercentage: 25,
-      thirdPartySplitPercentage: 25,
-
-      minAudioBitrate: 'lossless',
-      requireDrmEncryption: false,
-      allowOfflineListening: true,
-      maxConcurrentStreams: null,
-
-      allowTrackModification: true,
-      requireApprovalForModification: false,
-
-      allowNonprofitUse: true,
-      allowEducationalUse: true,
-      allowReligiousUse: true,
-      allowPoliticalUse: true,
-      allowAdultContent: true,
-      allowGamblingUse: true,
-      allowMilitaryUse: false,
-
-      additionalTerms:
-        'Comprehensive commercial rights. Unlimited streaming, sales, downloads. Full remix & sampling rights. Broadcasting allowed.',
-    })
-
-    // === EXCLUSIVE - Négociation ===
-    await License.create({
-      title: 'Exclusive Rights',
-      description:
-        'Exclusive purchase handled manually through quote and negotiation. Unique terms per agreement.',
-      isPaypalEnabled: false,
-      isActive: true,
-      sortOrder: 50,
-      priceCents: 0,
-      isTemplate: true,
-      templateCategory: 'exclusive',
-
-      audioFormats: null,
-      trackSeparation: null,
-
-      maxStreams: null,
-      maxDownloads: null,
-      maxSales: null,
-      radioStations: null,
-
-      allowVideoClips: true,
-      videoClipsLimit: null,
-      allowedPlatforms: null,
-
-      allowLivePerformance: true,
-      allowRadioAirplay: true,
-      allowTelevision: true,
-      allowStreaming: true,
-      allowPodcast: true,
-      allowMechanicalRepro: true,
-      allowRemix: true,
-      allowRemixDistribution: true,
-      allowSampling: true,
-      allowMonetization: true,
-      allowContentId: true,
-
-      isExclusive: true,
-      allowCommercialUse: true,
-      commercialUseLimit: 'unlimited',
-
-      allowedTerritories: null,
-      durationMonths: 12,
-
-      allowTransfer: false,
-      allowSublicense: false,
-
-      requireMasterCredit: false,
-      requirePublishingCredit: false,
-      requireArtistCredit: false,
-
-      masterSplitPercentage: 0,
-      publishingSplitPercentage: 0,
-      thirdPartySplitPercentage: 0,
-
-      minAudioBitrate: null,
-      requireDrmEncryption: false,
-      allowOfflineListening: false,
-
-      allowNonprofitUse: false,
-      allowEducationalUse: false,
-      allowReligiousUse: false,
-      allowPoliticalUse: false,
-      allowAdultContent: false,
-      allowGamblingUse: false,
-      allowMilitaryUse: false,
-
-      additionalTerms:
-        'Exclusive rights negotiated per case. Contact for custom terms and pricing.',
-      requiresWrittenAgreement: true,
-    })
+    await License.createMany([
+      {
+        title: 'Basic License',
+        description: 'MP3, WAV, and stems license for standard releases.',
+        isPaypalEnabled: true,
+        isActive: true,
+        sortOrder: 10,
+        priceCents: 2990,
+        isTemplate: true,
+        templateCategory: 'basic',
+        audioFormats: ['mp3', 'wav'],
+        trackSeparation: 'stems',
+        maxStreams: 500000,
+        maxSales: 2000,
+        radioStations: 2,
+        allowVideoClips: true,
+        videoClipsLimit: 1,
+        allowLivePerformance: true,
+        allowRadioAirplay: true,
+        allowTelevision: false,
+        allowRemix: false,
+        allowMonetization: false,
+        allowContentId: false,
+        additionalTerms: 'Includes MP3, WAV, and track-by-track stems.',
+      },
+      {
+        title: 'Premium License',
+        description: 'MP3, WAV, and stems license for larger monetized releases.',
+        isPaypalEnabled: true,
+        isActive: true,
+        sortOrder: 20,
+        priceCents: 4990,
+        isTemplate: true,
+        templateCategory: 'premium',
+        audioFormats: ['mp3', 'wav'],
+        trackSeparation: 'stems',
+        maxStreams: 500000,
+        maxSales: 3000,
+        radioStations: 2,
+        allowVideoClips: true,
+        videoClipsLimit: 1,
+        allowLivePerformance: true,
+        allowRadioAirplay: true,
+        allowTelevision: false,
+        allowRemix: false,
+        allowMonetization: true,
+        allowContentId: true,
+        additionalTerms: 'Includes MP3, WAV, stems, and monetization rights.',
+      },
+      {
+        title: 'Premium Plus License',
+        description: 'MP3, WAV, and stems license with wider usage rights.',
+        isPaypalEnabled: true,
+        isActive: true,
+        sortOrder: 30,
+        priceCents: 7990,
+        isTemplate: true,
+        templateCategory: 'premium_plus',
+        audioFormats: ['mp3', 'wav'],
+        trackSeparation: 'stems',
+        maxStreams: 500000,
+        maxSales: 10000,
+        radioStations: 2,
+        allowVideoClips: true,
+        videoClipsLimit: 1,
+        allowLivePerformance: true,
+        allowRadioAirplay: true,
+        allowTelevision: false,
+        allowRemix: true,
+        allowMonetization: true,
+        allowContentId: true,
+        additionalTerms: 'Includes MP3, WAV, stems, remix rights, and monetization.',
+      },
+      {
+        title: 'Exclusive Rights',
+        description: 'Exclusive purchase handled manually through quote and negotiation.',
+        isPaypalEnabled: false,
+        isActive: true,
+        sortOrder: 40,
+        priceCents: 0,
+        isTemplate: true,
+        templateCategory: 'exclusive',
+        audioFormats: null,
+        trackSeparation: null,
+        maxStreams: null,
+        maxSales: null,
+        radioStations: null,
+        allowVideoClips: true,
+        videoClipsLimit: null,
+        allowLivePerformance: true,
+        allowRadioAirplay: true,
+        allowTelevision: true,
+        allowRemix: true,
+        allowMonetization: true,
+        allowContentId: true,
+        additionalTerms: 'Exclusive rights are negotiated case by case.',
+      },
+    ])
   }
 }

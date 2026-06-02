@@ -32,7 +32,6 @@ const EMPTY_PLAYER_TRACK = {
   duration: "0:00",
   bpm: 0,
   price: "",
-  purchasePrices: {},
   cover: "from-slate-700 via-slate-800 to-slate-950",
   coverImage: null,
   audioSrc: defaultPreviewSrc,

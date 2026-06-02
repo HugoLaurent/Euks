@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, LoaderCircle, ShieldAlert } from "lucide-react";
+import { API_BASE_URL } from "@/lib";
 
 let paypalSdkPromise = null;
 let paypalSdkSrc = "";
@@ -55,7 +56,6 @@ function getPrimaryCapture(result) {
 }
 
 function PayPalSandboxCheckout({
-  amountValue,
   copy,
   isEnabled,
   language,
@@ -88,17 +88,19 @@ function PayPalSandboxCheckout({
           isLoading: true,
         }));
 
-        const response = await fetch("/api/paypal/config", {
+        const response = await fetch(`${API_BASE_URL}/payments/paypal/config`, {
           signal: controller.signal,
         });
         const payload = await response.json();
-
-        if (!response.ok) {
-          throw new Error(payload.message || copy.paypalConfigError);
-        }
+        const isConfigured = Boolean(
+          (payload.enabled ?? payload.configured) &&
+            payload.clientId &&
+            payload.currencyCode &&
+            payload.buyerCountry,
+        );
 
         setConfigState({
-          configured: Boolean(payload.configured),
+          configured: response.ok && isConfigured,
           isLoading: false,
           payload,
         });
@@ -169,20 +171,21 @@ function PayPalSandboxCheckout({
               status: "creating_order",
             }));
 
-            const response = await fetch("/api/paypal/create-order", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
+            const response = await fetch(
+              `${API_BASE_URL}/payments/paypal/orders`,
+              {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  trackId: track.id,
+                  licenseId: license.id,
+                  locale: language === "fr" ? "fr-FR" : "en-US",
+                }),
               },
-              body: JSON.stringify({
-                amountValue,
-                currencyCode: configState.payload.currencyCode,
-                licenseId: license.id,
-                licenseTitle: license.title,
-                locale: language === "fr" ? "fr-FR" : "en-US",
-                trackTitle: track.title,
-              }),
-            });
+            );
 
             const payload = await response.json();
 
@@ -204,15 +207,22 @@ function PayPalSandboxCheckout({
               status: "capturing",
             }));
 
-            const response = await fetch("/api/paypal/capture-order", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
+            const response = await fetch(
+              `${API_BASE_URL}/payments/paypal/orders/${encodeURIComponent(
+                data.orderID,
+              )}/capture`,
+              {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  trackId: track.id,
+                  licenseId: license.id,
+                }),
               },
-              body: JSON.stringify({
-                orderID: data.orderID,
-              }),
-            });
+            );
 
             const payload = await response.json();
 
@@ -295,7 +305,6 @@ function PayPalSandboxCheckout({
       }
     };
   }, [
-    amountValue,
     configState.configured,
     configState.payload,
     copy.paypalCaptureError,
@@ -311,11 +320,9 @@ function PayPalSandboxCheckout({
   if (!isEnabled) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/6 p-4 text-sm text-slate-200">
-        <p className="font-semibold text-white">
-          {license?.isFree ? copy.freeTitle : copy.unavailableTitle}
-        </p>
+        <p className="font-semibold text-white">{copy.unavailableTitle}</p>
         <p className="mt-2 leading-6 text-slate-300">
-          {license?.isFree ? copy.freeDescription : copy.unavailableDescription}
+          {copy.unavailableDescription}
         </p>
       </div>
     );

@@ -4,7 +4,13 @@ import PayPalSandboxCheckout from "@/components/PayPalSandboxCheckout.jsx";
 
 function getDefaultLicenseId(cards) {
   const cheapestCard = cards
-    .filter((card) => Number.isFinite(Number(card.priceCents)))
+    .filter(
+      (card) =>
+        card.checkoutEnabled &&
+        card.priceCents !== null &&
+        card.priceCents !== undefined &&
+        Number.isFinite(Number(card.priceCents)),
+    )
     .sort(
       (left, right) => Number(left.priceCents) - Number(right.priceCents),
     )[0];
@@ -25,7 +31,6 @@ const purchaseModalCopy = {
     onRequest: "Sur demande",
     negotiate: "Negocier",
     chooseLicense: "Choisir",
-    useForFree: "Utilisation gratuite",
     selectedLicense: "Licence selectionnee",
     testModeBadge: "Mode test PayPal",
     sandboxTitle: "Checkout sandbox",
@@ -42,9 +47,6 @@ const purchaseModalCopy = {
     unavailableTitle: "Paiement test indisponible",
     unavailableDescription:
       "Cette licence passe par une nego, donc le checkout PayPal est desactive pour celle-ci.",
-    freeTitle: "Licence gratuite",
-    freeDescription:
-      "Cette licence est en mode gratuit, donc aucun checkout PayPal n'est necessaire.",
     quoteOnly: "Devis",
     selectedTag: "Selectionnee",
     paypalInstructionTitle: "Test sandbox",
@@ -52,7 +54,7 @@ const purchaseModalCopy = {
       "Connecte-toi avec un compte acheteur sandbox PayPal pour approuver ce paiement de test.",
     paypalMissingTitle: "Configuration PayPal manquante",
     paypalMissingDescription:
-      "Ajoute PAYPAL_CLIENT_ID et PAYPAL_CLIENT_SECRET dans .env.local, puis relance Vite pour activer le vrai checkout sandbox.",
+      "Ajoute PAYPAL_CLIENT_ID et PAYPAL_CLIENT_SECRET dans le .env du back, puis relance le serveur back pour activer le vrai checkout sandbox.",
     paypalLoading: "Chargement du checkout PayPal...",
     paypalConfigError: "Impossible de recuperer la configuration PayPal.",
     paypalCreateOrderError: "La creation de commande PayPal a echoue.",
@@ -80,7 +82,6 @@ const purchaseModalCopy = {
     onRequest: "On request",
     negotiate: "Negotiate",
     chooseLicense: "Choose",
-    useForFree: "Free to use",
     selectedLicense: "Selected license",
     testModeBadge: "PayPal test mode",
     sandboxTitle: "Sandbox checkout",
@@ -97,9 +98,6 @@ const purchaseModalCopy = {
     unavailableTitle: "Test payment unavailable",
     unavailableDescription:
       "This license goes through a negotiated quote, so PayPal checkout is disabled for it.",
-    freeTitle: "Free license",
-    freeDescription:
-      "This license is marked as free to use, so no PayPal checkout is needed.",
     quoteOnly: "Quote only",
     selectedTag: "Selected",
     paypalInstructionTitle: "Sandbox test",
@@ -107,7 +105,7 @@ const purchaseModalCopy = {
       "Sign in with a PayPal sandbox buyer account to approve this test payment.",
     paypalMissingTitle: "PayPal configuration missing",
     paypalMissingDescription:
-      "Add PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET to .env.local, then restart Vite to enable the real sandbox checkout.",
+      "Add PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET to the backend .env, then restart the backend server to enable the real sandbox checkout.",
     paypalLoading: "Loading PayPal checkout...",
     paypalConfigError: "Unable to load PayPal configuration.",
     paypalCreateOrderError: "PayPal order creation failed.",
@@ -165,6 +163,13 @@ function PurchaseModal({ isOpen, onClose, onPlay, track, language = "en" }) {
       return undefined;
     }
 
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverscrollBehavior =
+      document.documentElement.style.overscrollBehavior;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overscrollBehavior = "contain";
+
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
         handleRequestClose();
@@ -174,6 +179,9 @@ function PurchaseModal({ isOpen, onClose, onPlay, track, language = "en" }) {
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overscrollBehavior =
+        previousHtmlOverscrollBehavior;
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isOpen, handleRequestClose]);
@@ -192,18 +200,18 @@ function PurchaseModal({ isOpen, onClose, onPlay, track, language = "en" }) {
 
   return (
     <div
-      className="purchase-modal-backdrop-enter fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 px-4 py-4 backdrop-blur-md md:items-center md:py-8"
+      className="purchase-modal-backdrop-enter fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-slate-950/70 px-4 py-4 backdrop-blur-md md:items-center md:py-8"
       onClick={handleRequestClose}
       role="presentation"
     >
       <div
-        className="purchase-modal-panel-enter max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-4xl border border-white/10 bg-slate-950/95 shadow-[0_30px_100px_rgba(2,6,23,0.75)]"
+        className="purchase-modal-panel-enter flex max-h-[92dvh] w-full max-w-6xl flex-col overflow-hidden rounded-4xl border border-white/10 bg-slate-950/95 shadow-[0_30px_100px_rgba(2,6,23,0.75)]"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={copy.dialogLabel(track.title)}
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 md:px-6">
+        <div className="shrink-0 flex items-center justify-between border-b border-white/10 px-5 py-4 md:px-6">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">
               {copy.kicker}
@@ -223,7 +231,8 @@ function PurchaseModal({ isOpen, onClose, onPlay, track, language = "en" }) {
           </button>
         </div>
 
-        <div className="grid gap-6 overflow-y-auto px-5 py-5 md:px-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-8">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 md:px-6">
+          <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-8">
           <aside className="space-y-4">
             <div
               className={`flex min-h-65 items-end rounded-3xl ${
@@ -341,7 +350,6 @@ function PurchaseModal({ isOpen, onClose, onPlay, track, language = "en" }) {
                   </div>
 
                   <PayPalSandboxCheckout
-                    amountValue={selectedLicense?.amountValue ?? null}
                     copy={copy}
                     isEnabled={canSimulatePayment}
                     language={language}
@@ -434,7 +442,7 @@ function PurchaseModal({ isOpen, onClose, onPlay, track, language = "en" }) {
                           type="button"
                           onClick={() => handleLicenseSelect(card.selectionId)}
                           className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition ${
-                            canCheckout || card.isFree
+                            canCheckout
                               ? isSelected
                                 ? "border-[#ffc439]/50 bg-[#003087] text-white"
                                 : "border-white/10 bg-white/6 text-slate-100 hover:bg-white/10"
@@ -442,11 +450,7 @@ function PurchaseModal({ isOpen, onClose, onPlay, track, language = "en" }) {
                           }`}
                         >
                           <span>
-                            {card.isFree
-                              ? copy.useForFree
-                              : canCheckout
-                                ? copy.chooseLicense
-                                : copy.quoteOnly}
+                            {canCheckout ? copy.chooseLicense : copy.quoteOnly}
                           </span>
                         </button>
                       </div>
@@ -467,6 +471,7 @@ function PurchaseModal({ isOpen, onClose, onPlay, track, language = "en" }) {
               </div>
             ) : null}
           </section>
+          </div>
         </div>
       </div>
     </div>

@@ -153,69 +153,12 @@ function formatPrice(cents, language) {
   }).format(amount);
 }
 
-function createPurchasePrices(cents, language) {
-  const basePriceCents = Number(cents || 0);
-
-  return {
-    basic: formatPrice(basePriceCents, language),
-    premium: formatPrice(basePriceCents + 800, language),
-    premiumPlus: formatPrice(basePriceCents + 1600, language),
-    premium_plus: formatPrice(basePriceCents + 1600, language),
-    unlimited: formatPrice(basePriceCents + 2800, language),
-    exclusive: "NEGOTIATE",
-  };
-}
-
 function formatLicensePrice(cents, language) {
   if (cents === null || cents === undefined) {
     return null;
   }
 
   return formatPrice(cents, language);
-}
-
-function getTierAmountValue(tier, trackPriceCents) {
-  const baseAmount = Number(trackPriceCents || 0) / 100;
-
-  if (tier === "premium") {
-    return (baseAmount + 8).toFixed(2);
-  }
-
-  if (tier === "premiumPlus") {
-    return (baseAmount + 16).toFixed(2);
-  }
-
-  if (tier === "unlimited") {
-    return (baseAmount + 28).toFixed(2);
-  }
-
-  if (tier === "basic") {
-    return baseAmount.toFixed(2);
-  }
-
-  return null;
-}
-
-function getTierPriceCents(tier, trackPriceCents) {
-  const basePriceCents = Number(trackPriceCents || 0);
-
-  if (tier === "basic") {
-    return basePriceCents;
-  }
-
-  if (tier === "premium") {
-    return basePriceCents + 800;
-  }
-
-  if (tier === "premiumPlus") {
-    return basePriceCents + 1600;
-  }
-
-  if (tier === "unlimited") {
-    return basePriceCents + 2800;
-  }
-
-  return null;
 }
 
 function slugifyValue(value) {
@@ -294,7 +237,6 @@ function adaptTrack(track, language, durationOverrides) {
     bpm: track.bpm ?? 0,
     price: formatPrice(track.priceCents, language),
     priceCents: track.priceCents,
-    purchasePrices: createPurchasePrices(track.priceCents, language),
     cover: pickCoverGradient(track.id || 0),
     coverImage,
     audioSrc,
@@ -329,9 +271,6 @@ function formatDeliverables(license, language) {
   if (license.trackSeparation === "stems") {
     parts.push("STEMS");
   }
-  formats
-    .filter((format) => format !== "mp3" && format !== "wav")
-    .forEach((format) => parts.push(format.toUpperCase()));
   if (formats.includes("mp3")) {
     parts.push("MP3");
   }
@@ -394,19 +333,14 @@ function resolveLicenseTier(license) {
   const normalizedCategory = slugifyValue(license.templateCategory);
   const normalizedTitle = slugifyValue(license.title);
 
-  if (!license.isPaypalEnabled) {
-    return "free";
-  }
-
-  if (normalizedCategory === "standard" || normalizedTitle.includes("basic")) {
+  if (normalizedCategory === "basic" || normalizedTitle.includes("basic")) {
     return "basic";
   }
 
-  if (normalizedCategory === "premium" && normalizedTitle.includes("plus")) {
-    return "premiumPlus";
-  }
-
-  if (normalizedTitle.includes("premium-plus")) {
+  if (
+    normalizedCategory === "premium-plus" ||
+    normalizedTitle.includes("premium-plus")
+  ) {
     return "premiumPlus";
   }
 
@@ -421,31 +355,26 @@ function resolveLicenseTier(license) {
     return "exclusive";
   }
 
-  if (normalizedTitle.includes("unlimited")) {
-    return "unlimited";
-  }
-
   return "basic";
 }
 
-function getLicensePriceMeta(license, language, trackPriceCents) {
+function getLicensePriceMeta(license, language) {
   const tier = resolveLicenseTier(license);
-
-  if (tier === "free") {
-    return {
-      amountValue: null,
-      checkoutEnabled: false,
-      displayPrice: language === "fr" ? "Gratuit" : "Free of use",
-      priceCents: 0,
-      tier,
-    };
-  }
-
   const attachedPriceCents = Number(license.priceCents);
   const effectivePriceCents =
     Number.isFinite(attachedPriceCents) && attachedPriceCents >= 0
       ? attachedPriceCents
-      : getTierPriceCents(tier, trackPriceCents);
+      : 0;
+
+  if (!license.isPaypalEnabled || tier === "exclusive") {
+    return {
+      checkoutEnabled: false,
+      displayPrice: language === "fr" ? "Negocier" : "Negotiate",
+      priceCents: null,
+      tier,
+    };
+  }
+
   const attachedDisplayPrice = formatLicensePrice(
     effectivePriceCents,
     language,
@@ -453,7 +382,6 @@ function getLicensePriceMeta(license, language, trackPriceCents) {
 
   if (attachedDisplayPrice) {
     return {
-      amountValue: (effectivePriceCents / 100).toFixed(2),
       displayPrice: attachedDisplayPrice,
       priceCents: effectivePriceCents,
       checkoutEnabled: Boolean(license.isPaypalEnabled),
@@ -461,34 +389,17 @@ function getLicensePriceMeta(license, language, trackPriceCents) {
     };
   }
 
-  const purchasePrices = createPurchasePrices(trackPriceCents, language);
-  const rawPrice = purchasePrices[tier] ?? null;
-  const amountValue =
-    typeof rawPrice === "string" && rawPrice !== "NEGOTIATE"
-      ? getTierAmountValue(tier, trackPriceCents)
-      : null;
-
   return {
-    amountValue,
-    checkoutEnabled: rawPrice != null && rawPrice !== "NEGOTIATE",
-    displayPrice:
-      rawPrice === "NEGOTIATE"
-        ? language === "fr"
-          ? "Negocier"
-          : "Negotiate"
-        : rawPrice,
+    checkoutEnabled: false,
+    displayPrice: language === "fr" ? "Indisponible" : "Unavailable",
     priceCents: effectivePriceCents,
     tier,
   };
 }
 
-export function adaptLicensesToPurchaseCards(
-  licenses,
-  language,
-  trackPriceCents,
-) {
+export function adaptLicensesToPurchaseCards(licenses, language) {
   return licenses.map((license) => {
-    const priceMeta = getLicensePriceMeta(license, language, trackPriceCents);
+    const priceMeta = getLicensePriceMeta(license, language);
 
     return {
       ...license,
@@ -499,14 +410,19 @@ export function adaptLicensesToPurchaseCards(
       format: formatDeliverables(license, language),
       details: createLicenseDetails(license, language),
       ...priceMeta,
-      isFree: !license.isPaypalEnabled,
     };
   });
 }
 
 function getLowestPricedLicenseCard(licenseCards) {
   return licenseCards
-    .filter((card) => Number.isFinite(Number(card.priceCents)))
+    .filter(
+      (card) =>
+        card.checkoutEnabled &&
+        card.priceCents !== null &&
+        card.priceCents !== undefined &&
+        Number.isFinite(Number(card.priceCents)),
+    )
     .sort(
       (left, right) => Number(left.priceCents) - Number(right.priceCents),
     )[0];
@@ -693,7 +609,6 @@ export function adaptCatalogTracks(tracks, language, durationOverrides = {}) {
     const licenseCards = adaptLicensesToPurchaseCards(
       attachedLicenses,
       language,
-      track.priceCents,
     );
     const lowestLicenseCard = getLowestPricedLicenseCard(licenseCards);
     const adaptedTrack = adaptTrack(track, language, durationOverrides);

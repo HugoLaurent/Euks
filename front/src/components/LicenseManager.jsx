@@ -1,14 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  Check,
-  Copy,
-  Edit3,
-  Plus,
-  RefreshCw,
-  Save,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Check, Copy, Edit3, Plus, RefreshCw, Save, Trash2, X } from "lucide-react";
 import {
   createLicense,
   deleteLicense,
@@ -17,104 +8,48 @@ import {
   updateLicense,
 } from "@/lib";
 
-const AUDIO_FORMATS = ["mp3", "wav", "flac", "aac", "ogg", "aiff"];
-const PLATFORMS = [
-  "tiktok",
-  "youtube",
-  "instagram",
-  "twitch",
-  "facebook",
-  "snapchat",
+const AUDIO_FORMATS = ["mp3", "wav"];
+const TRACK_SEPARATIONS = ["full_mix", "stems"];
+const TEMPLATE_CATEGORIES = [
+  ["basic", "Basic"],
+  ["premium", "Premium"],
+  ["premium_plus", "Premium Plus"],
+  ["exclusive", "Exclusive"],
 ];
-const TEMPLATE_CATEGORIES = ["standard", "premium", "exclusive", "custom"];
+
+const RIGHT_FLAGS = [
+  ["allowVideoClips", "Video clips"],
+  ["allowLivePerformance", "Live"],
+  ["allowRadioAirplay", "Radio"],
+  ["allowTelevision", "TV"],
+  ["allowRemix", "Remix"],
+  ["allowMonetization", "Monetization"],
+  ["allowContentId", "Content ID"],
+];
 
 const INITIAL_FORM = {
   title: "",
   description: "",
   priceEuro: "",
   isActive: true,
-  isTemplate: false,
-  templateCategory: "custom",
+  isTemplate: true,
+  templateCategory: "basic",
   isPaypalEnabled: true,
   audioFormats: ["mp3", "wav"],
-  trackSeparation: "full_mix",
+  trackSeparation: "stems",
   maxStreams: "",
-  maxDownloads: "",
   maxSales: "",
+  radioStations: "",
   allowVideoClips: true,
-  videoClipsLimit: "",
-  allowedPlatforms: ["youtube", "instagram", "tiktok"],
-  allowLivePerformance: false,
-  allowRadioAirplay: false,
+  videoClipsLimit: "1",
+  allowLivePerformance: true,
+  allowRadioAirplay: true,
   allowTelevision: false,
-  allowStreaming: true,
-  allowPodcast: false,
-  allowMechanicalRepro: false,
   allowRemix: false,
-  allowRemixDistribution: false,
-  allowSampling: false,
-  allowMonetization: true,
+  allowMonetization: false,
   allowContentId: false,
-  isExclusive: false,
-  allowCommercialUse: true,
-  commercialUseLimit: "limited",
-  commercialUseDescription: "",
-  allowedTerritories: ["WORLDWIDE"],
-  durationMonths: "",
-  allowTransfer: false,
-  allowSublicense: false,
-  transferRestrictions: "",
-  requireMasterCredit: true,
-  requirePublishingCredit: true,
-  requireArtistCredit: true,
-  creditRequirements: "[Artist] - [Track] (euks.io)",
-  masterSplitPercentage: 0,
-  publishingSplitPercentage: 0,
-  thirdPartySplitPercentage: 0,
-  minAudioBitrate: "320",
-  requireDrmEncryption: false,
-  allowOfflineListening: true,
-  maxConcurrentStreams: "",
-  allowTrackModification: false,
-  requireApprovalForModification: false,
-  modificationRestrictions: "",
-  allowNonprofitUse: true,
-  allowEducationalUse: true,
-  allowReligiousUse: true,
-  allowPoliticalUse: false,
-  allowAdultContent: true,
-  allowGamblingUse: false,
-  allowMilitaryUse: false,
-  restrictedGenres: [],
-  restrictedUseCases: [],
   additionalTerms: "",
-  requiresWrittenAgreement: false,
-  revisionNotes: "",
 };
-
-const BOOLEAN_RIGHTS = [
-  ["allowLivePerformance", "Live"],
-  ["allowRadioAirplay", "Radio"],
-  ["allowTelevision", "TV"],
-  ["allowStreaming", "Streaming"],
-  ["allowPodcast", "Podcast"],
-  ["allowMechanicalRepro", "Mechanical"],
-  ["allowRemix", "Remix"],
-  ["allowRemixDistribution", "Remix distribution"],
-  ["allowSampling", "Sampling"],
-  ["allowMonetization", "Monetization"],
-  ["allowContentId", "Content ID"],
-];
-
-const RESTRICTED_USE_FLAGS = [
-  ["allowNonprofitUse", "Nonprofit"],
-  ["allowEducationalUse", "Education"],
-  ["allowReligiousUse", "Religious"],
-  ["allowPoliticalUse", "Political"],
-  ["allowAdultContent", "Adult content"],
-  ["allowGamblingUse", "Gambling"],
-  ["allowMilitaryUse", "Military"],
-];
 
 function toArrayPayload(payload) {
   if (Array.isArray(payload)) {
@@ -126,25 +61,6 @@ function toArrayPayload(payload) {
   }
 
   return [];
-}
-
-function toFormValue(license) {
-  return {
-    ...INITIAL_FORM,
-    ...license,
-    audioFormats: license.audioFormats || [],
-    allowedPlatforms: license.allowedPlatforms || [],
-    allowedTerritories: license.allowedTerritories || ["WORLDWIDE"],
-    restrictedGenres: license.restrictedGenres || [],
-    restrictedUseCases: license.restrictedUseCases || [],
-    priceEuro: formatCentsToEuroInput(license.priceCents),
-    maxStreams: license.maxStreams ?? "",
-    maxDownloads: license.maxDownloads ?? "",
-    maxSales: license.maxSales ?? "",
-    videoClipsLimit: license.videoClipsLimit ?? "",
-    durationMonths: license.durationMonths ?? "",
-    maxConcurrentStreams: license.maxConcurrentStreams ?? "",
-  };
 }
 
 function nullableNumber(value) {
@@ -195,11 +111,30 @@ function formatPriceLabel(cents) {
   return `${(amount / 100).toFixed(2)} EUR`;
 }
 
-function listFromText(value) {
-  return String(value || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
+function formatNumberLabel(value) {
+  if (value === null || value === undefined || value === "") {
+    return "no limit";
+  }
+
+  return new Intl.NumberFormat("fr-FR").format(Number(value));
+}
+
+function getCategoryLabel(value) {
+  return TEMPLATE_CATEGORIES.find(([category]) => category === value)?.[1] ?? "Custom";
+}
+
+function toFormValue(license) {
+  return {
+    ...INITIAL_FORM,
+    ...license,
+    audioFormats: license.audioFormats || [],
+    priceEuro: formatCentsToEuroInput(license.priceCents),
+    maxStreams: license.maxStreams ?? "",
+    maxSales: license.maxSales ?? "",
+    radioStations: license.radioStations ?? "",
+    videoClipsLimit: license.videoClipsLimit ?? "",
+    additionalTerms: license.additionalTerms ?? "",
+  };
 }
 
 function formToPayload(form) {
@@ -209,30 +144,17 @@ function formToPayload(form) {
     ...licenseFields,
     priceCents: parseEuroToCents(priceEuro, { allowZero: true }) ?? 0,
     maxStreams: nullableNumber(form.maxStreams),
-    maxDownloads: nullableNumber(form.maxDownloads),
     maxSales: nullableNumber(form.maxSales),
+    radioStations: nullableNumber(form.radioStations),
     videoClipsLimit: nullableNumber(form.videoClipsLimit),
-    durationMonths: nullableNumber(form.durationMonths),
-    maxConcurrentStreams: nullableNumber(form.maxConcurrentStreams),
-    masterSplitPercentage: Number(form.masterSplitPercentage || 0),
-    publishingSplitPercentage: Number(form.publishingSplitPercentage || 0),
-    thirdPartySplitPercentage: Number(form.thirdPartySplitPercentage || 0),
-    restrictedGenres: form.restrictedGenres?.length
-      ? form.restrictedGenres
-      : null,
-    restrictedUseCases: form.restrictedUseCases?.length
-      ? form.restrictedUseCases
-      : null,
+    description: form.description.trim() || null,
+    additionalTerms: form.additionalTerms.trim() || null,
   };
 }
 
 function validateForm(form) {
   const errors = [];
   const priceCents = parseEuroToCents(form.priceEuro, { allowZero: true });
-  const splitTotal =
-    Number(form.masterSplitPercentage || 0) +
-    Number(form.publishingSplitPercentage || 0) +
-    Number(form.thirdPartySplitPercentage || 0);
 
   if (!form.title.trim() || form.title.length > 160) {
     errors.push("Title is required and must stay under 160 characters.");
@@ -246,25 +168,8 @@ function validateForm(form) {
     errors.push("Paid licenses must have a price greater than 0.");
   }
 
-  if (splitTotal > 100) {
-    errors.push("Revenue splits must total 100% or less.");
-  }
-
-  if (!form.allowRemix && form.allowRemixDistribution) {
-    errors.push("Remix distribution requires remix rights.");
-  }
-
-  if (form.isExclusive && !form.durationMonths) {
-    errors.push("Exclusive licenses must define a duration.");
-  }
-
-  if (
-    (form.requireArtistCredit ||
-      form.requireMasterCredit ||
-      form.requirePublishingCredit) &&
-    !form.creditRequirements.trim()
-  ) {
-    errors.push("Credit requirements are required when credits are enabled.");
+  if (form.audioFormats.length === 0 && form.isPaypalEnabled) {
+    errors.push("Paid licenses must include at least one audio format.");
   }
 
   return errors;
@@ -287,16 +192,15 @@ function ToggleButton({ isActive, label, onClick }) {
   );
 }
 
-function AdvancedLicenseManager({ language = "fr" }) {
+function LicenseManager({ language = "fr" }) {
   const [licenses, setLicenses] = useState([]);
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
   const [activeOnly, setActiveOnly] = useState(true);
   const [templatesOnly, setTemplatesOnly] = useState(false);
-  const [freeOnly, setFreeOnly] = useState(false);
+  const [quoteOnly, setQuoteOnly] = useState(false);
   const [editingLicenseId, setEditingLicenseId] = useState(null);
   const [form, setForm] = useState(INITIAL_FORM);
-  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [submitState, setSubmitState] = useState({
     isLoading: false,
     error: "",
@@ -308,7 +212,7 @@ function AdvancedLicenseManager({ language = "fr" }) {
       language === "fr"
         ? {
             title: "Licences",
-            subtitle: "Creation et gestion des licences avancees.",
+            subtitle: "Gestion des paliers de licence affichés dans le checkout.",
             refresh: "Rafraichir",
             create: "Nouvelle licence",
             edit: "Modifier",
@@ -317,25 +221,24 @@ function AdvancedLicenseManager({ language = "fr" }) {
             filters: {
               templates: "Templates",
               active: "Actives",
-              free: "Gratuites",
+              quote: "Negociation",
             },
             loading: "Chargement des licences...",
             empty: "Aucune licence ne correspond aux filtres.",
             submit: "Enregistrer",
             saving: "Enregistrement...",
             cancel: "Annuler",
-            advanced: "Options avancees",
             price: "Prix (EUR)",
-            pricePlaceholder: "Ex: 29,99",
-            freeMode: "Mode gratuit",
-            freeLabel: "Gratuit",
+            pricePlaceholder: "Ex: 29,90",
+            paymentMode: "Paiement",
+            quoteLabel: "Negociation",
             paidLabel: "Payant",
             deleteConfirm: "Supprimer cette licence ?",
-            tokenRequired: "Tu dois etre connecte pour modifier les licences.",
+            tokenRequired: "Tu dois etre connecté pour modifier les licences.",
           }
         : {
             title: "Licenses",
-            subtitle: "Create and manage advanced license templates.",
+            subtitle: "Manage the license tiers shown in checkout.",
             refresh: "Refresh",
             create: "New license",
             edit: "Edit",
@@ -344,18 +247,17 @@ function AdvancedLicenseManager({ language = "fr" }) {
             filters: {
               templates: "Templates",
               active: "Active",
-              free: "Free",
+              quote: "Quote only",
             },
             loading: "Loading licenses...",
             empty: "No license matches the filters.",
             submit: "Save",
             saving: "Saving...",
             cancel: "Cancel",
-            advanced: "Advanced options",
             price: "Price (EUR)",
             pricePlaceholder: "Ex: 29.99",
-            freeMode: "Free mode",
-            freeLabel: "Free",
+            paymentMode: "Payment",
+            quoteLabel: "Quote",
             paidLabel: "Paid",
             deleteConfirm: "Delete this license?",
             tokenRequired: "You must be signed in to edit licenses.",
@@ -376,10 +278,10 @@ function AdvancedLicenseManager({ language = "fr" }) {
         activeOnly,
         isTemplate: templatesOnly,
       });
-
       const nextLicenses = toArrayPayload(payload).filter((license) =>
-        freeOnly ? !license.isPaypalEnabled : true,
+        quoteOnly ? !license.isPaypalEnabled : true,
       );
+
       setLicenses(nextLicenses);
       setStatus("ready");
     } catch (loadError) {
@@ -404,7 +306,7 @@ function AdvancedLicenseManager({ language = "fr" }) {
         }
 
         const nextLicenses = toArrayPayload(payload).filter((license) =>
-          freeOnly ? !license.isPaypalEnabled : true,
+          quoteOnly ? !license.isPaypalEnabled : true,
         );
         setLicenses(nextLicenses);
         setStatus("ready");
@@ -425,7 +327,7 @@ function AdvancedLicenseManager({ language = "fr" }) {
     return () => {
       isCancelled = true;
     };
-  }, [activeOnly, freeOnly, templatesOnly]);
+  }, [activeOnly, quoteOnly, templatesOnly]);
 
   function updateField(field, value) {
     setForm((previous) => ({
@@ -568,9 +470,9 @@ function AdvancedLicenseManager({ language = "fr" }) {
               onClick={() => setActiveOnly((value) => !value)}
             />
             <ToggleButton
-              isActive={freeOnly}
-              label={copy.filters.free}
-              onClick={() => setFreeOnly((value) => !value)}
+              isActive={quoteOnly}
+              label={copy.filters.quote}
+              onClick={() => setQuoteOnly((value) => !value)}
             />
             <button
               type="button"
@@ -621,15 +523,16 @@ function AdvancedLicenseManager({ language = "fr" }) {
                       <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-slate-300">
                         {license.isPaypalEnabled
                           ? copy.paidLabel
-                          : copy.freeLabel}
+                          : copy.quoteLabel}
                       </span>
                       <span className="rounded-full border border-cyan-300/25 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100">
                         {formatPriceLabel(license.priceCents)}
                       </span>
                     </div>
                     <p className="mt-2 text-xs uppercase tracking-[0.16em] text-cyan-200">
-                      {(license.audioFormats || []).join(", ") || "custom"} ·{" "}
-                      {license.templateCategory || "custom"}
+                      {getCategoryLabel(license.templateCategory)} ·{" "}
+                      {(license.audioFormats || []).join(" + ") || "quote"} ·{" "}
+                      {license.trackSeparation === "stems" ? "stems" : "full mix"}
                     </p>
                   </div>
                   <span
@@ -644,10 +547,23 @@ function AdvancedLicenseManager({ language = "fr" }) {
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-300 sm:grid-cols-4">
-                  <span>Streams: {license.maxStreams ?? "unlimited"}</span>
-                  <span>Videos: {license.videoClipsLimit ?? "unlimited"}</span>
-                  <span>Remix: {license.allowRemix ? "yes" : "no"}</span>
-                  <span>TV: {license.allowTelevision ? "yes" : "no"}</span>
+                  <span>Streams: {formatNumberLabel(license.maxStreams)}</span>
+                  <span>Sales: {formatNumberLabel(license.maxSales)}</span>
+                  <span>Video: {formatNumberLabel(license.videoClipsLimit)}</span>
+                  <span>Radio: {formatNumberLabel(license.radioStations)}</span>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-300">
+                  {RIGHT_FLAGS.filter(([field]) => license[field]).map(
+                    ([field, label]) => (
+                      <span
+                        key={field}
+                        className="rounded-full border border-white/10 bg-white/5 px-2 py-1"
+                      >
+                        {label}
+                      </span>
+                    ),
+                  )}
                 </div>
 
                 <div className="mt-4 flex flex-wrap justify-end gap-2">
@@ -724,16 +640,6 @@ function AdvancedLicenseManager({ language = "fr" }) {
               required={form.isPaypalEnabled}
             />
           </label>
-          <label className="text-sm text-slate-300 md:col-span-2">
-            Description
-            <textarea
-              value={form.description}
-              onChange={(event) =>
-                updateField("description", event.target.value)
-              }
-              className="mt-2 min-h-24 w-full rounded-xl border border-white/12 bg-white/5 px-3 py-2 text-white outline-none"
-            />
-          </label>
           <label className="text-sm text-slate-300">
             Category
             <select
@@ -743,23 +649,25 @@ function AdvancedLicenseManager({ language = "fr" }) {
               }
               className="mt-2 w-full rounded-xl border border-white/12 bg-white/5 px-3 py-2 text-white outline-none"
             >
-              {TEMPLATE_CATEGORIES.map((category) => (
+              {TEMPLATE_CATEGORIES.map(([value, label]) => (
                 <option
-                  key={category}
-                  value={category}
+                  key={value}
+                  value={value}
                   className="bg-slate-900 text-white"
                 >
-                  {category}
+                  {label}
                 </option>
               ))}
             </select>
           </label>
           <div className="text-sm text-slate-300">
-            {copy.freeMode}
+            {copy.paymentMode}
             <div className="mt-2">
               <ToggleButton
                 isActive={!form.isPaypalEnabled}
-                label={!form.isPaypalEnabled ? copy.freeLabel : copy.paidLabel}
+                label={
+                  !form.isPaypalEnabled ? copy.quoteLabel : copy.paidLabel
+                }
                 onClick={() =>
                   setForm((previous) => {
                     const isPaypalEnabled = !previous.isPaypalEnabled;
@@ -774,35 +682,19 @@ function AdvancedLicenseManager({ language = "fr" }) {
               />
             </div>
           </div>
-          <label className="text-sm text-slate-300">
-            Track separation
-            <select
-              value={form.trackSeparation}
+          <label className="text-sm text-slate-300 md:col-span-2">
+            Description
+            <textarea
+              value={form.description}
               onChange={(event) =>
-                updateField("trackSeparation", event.target.value)
+                updateField("description", event.target.value)
               }
-              className="mt-2 w-full rounded-xl border border-white/12 bg-white/5 px-3 py-2 text-white outline-none"
-            >
-              {[
-                "full_mix",
-                "stems",
-                "instrumental_only",
-                "vocal_only",
-                "acapella",
-              ].map((value) => (
-                <option
-                  key={value}
-                  value={value}
-                  className="bg-slate-900 text-white"
-                >
-                  {value.replaceAll("_", " ")}
-                </option>
-              ))}
-            </select>
+              className="mt-2 min-h-20 w-full rounded-xl border border-white/12 bg-white/5 px-3 py-2 text-white outline-none"
+            />
           </label>
         </div>
 
-        <div className="mt-5 space-y-4">
+        <div className="mt-5 grid gap-5 lg:grid-cols-2">
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
               Audio formats
@@ -821,250 +713,77 @@ function AdvancedLicenseManager({ language = "fr" }) {
 
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
-              Platforms
+              Track separation
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
-              {PLATFORMS.map((platform) => (
+              {TRACK_SEPARATIONS.map((value) => (
                 <ToggleButton
-                  key={platform}
-                  isActive={form.allowedPlatforms.includes(platform)}
-                  label={platform}
-                  onClick={() => toggleListValue("allowedPlatforms", platform)}
+                  key={value}
+                  isActive={form.trackSeparation === value}
+                  label={value === "stems" ? "Stems" : "Full mix"}
+                  onClick={() => updateField("trackSeparation", value)}
                 />
               ))}
             </div>
           </div>
+        </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            {[
-              ["maxStreams", "Max streams"],
-              ["maxDownloads", "Max downloads"],
-              ["maxSales", "Max sales"],
-            ].map(([field, label]) => (
-              <label key={field} className="text-sm text-slate-300">
-                {label}
-                <input
-                  type="number"
-                  value={form[field]}
-                  onChange={(event) => updateField(field, event.target.value)}
-                  placeholder="Unlimited"
-                  className="mt-2 w-full rounded-xl border border-white/12 bg-white/5 px-3 py-2 text-white outline-none"
-                />
-              </label>
+        <div className="mt-5 grid gap-4 md:grid-cols-4">
+          {[
+            ["maxStreams", "Max streams"],
+            ["maxSales", "Max sales"],
+            ["videoClipsLimit", "Video clips"],
+            ["radioStations", "Radio stations"],
+          ].map(([field, label]) => (
+            <label key={field} className="text-sm text-slate-300">
+              {label}
+              <input
+                type="number"
+                value={form[field]}
+                onChange={(event) => updateField(field, event.target.value)}
+                placeholder="No limit"
+                className="mt-2 w-full rounded-xl border border-white/12 bg-white/5 px-3 py-2 text-white outline-none"
+              />
+            </label>
+          ))}
+        </div>
+
+        <div className="mt-5">
+          <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
+            Rights
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {RIGHT_FLAGS.map(([field, label]) => (
+              <ToggleButton
+                key={field}
+                isActive={Boolean(form[field])}
+                label={label}
+                onClick={() => updateField(field, !form[field])}
+              />
             ))}
           </div>
+        </div>
 
-          <div>
-            <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
-              Usage rights
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {BOOLEAN_RIGHTS.map(([field, label]) => (
-                <ToggleButton
-                  key={field}
-                  isActive={Boolean(form[field])}
-                  label={label}
-                  onClick={() => updateField(field, !form[field])}
-                />
-              ))}
-            </div>
-          </div>
+        <label className="mt-5 block text-sm text-slate-300">
+          Additional terms
+          <textarea
+            value={form.additionalTerms}
+            onChange={(event) => updateField("additionalTerms", event.target.value)}
+            className="mt-2 min-h-24 w-full rounded-xl border border-white/12 bg-white/5 px-3 py-2 text-white outline-none"
+          />
+        </label>
 
-          <button
-            type="button"
-            onClick={() => setIsAdvancedOpen((value) => !value)}
-            className="rounded-full border border-white/12 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-200 transition hover:bg-white/10"
-          >
-            {copy.advanced}
-          </button>
-
-          {isAdvancedOpen ? (
-            <div className="grid gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 md:grid-cols-2">
-              <label className="text-sm text-slate-300">
-                Commercial limit
-                <select
-                  value={form.commercialUseLimit}
-                  onChange={(event) =>
-                    updateField("commercialUseLimit", event.target.value)
-                  }
-                  className="mt-2 w-full rounded-xl border border-white/12 bg-slate-950/40 px-3 py-2 text-white outline-none"
-                >
-                  {["unlimited", "limited", "prohibited"].map((value) => (
-                    <option
-                      key={value}
-                      value={value}
-                      className="bg-slate-900 text-white"
-                    >
-                      {value}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-sm text-slate-300">
-                Min bitrate
-                <select
-                  value={form.minAudioBitrate}
-                  onChange={(event) =>
-                    updateField("minAudioBitrate", event.target.value)
-                  }
-                  className="mt-2 w-full rounded-xl border border-white/12 bg-slate-950/40 px-3 py-2 text-white outline-none"
-                >
-                  {["128", "192", "256", "320", "lossless"].map((value) => (
-                    <option
-                      key={value}
-                      value={value}
-                      className="bg-slate-900 text-white"
-                    >
-                      {value}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-sm text-slate-300">
-                Duration months
-                <input
-                  type="number"
-                  value={form.durationMonths}
-                  onChange={(event) =>
-                    updateField("durationMonths", event.target.value)
-                  }
-                  placeholder="Perpetual"
-                  className="mt-2 w-full rounded-xl border border-white/12 bg-slate-950/40 px-3 py-2 text-white outline-none"
-                />
-              </label>
-              <label className="text-sm text-slate-300">
-                Video clips limit
-                <input
-                  type="number"
-                  value={form.videoClipsLimit}
-                  onChange={(event) =>
-                    updateField("videoClipsLimit", event.target.value)
-                  }
-                  placeholder="Unlimited"
-                  className="mt-2 w-full rounded-xl border border-white/12 bg-slate-950/40 px-3 py-2 text-white outline-none"
-                />
-              </label>
-              <label className="text-sm text-slate-300 md:col-span-2">
-                Territories
-                <input
-                  value={form.allowedTerritories.join(", ")}
-                  onChange={(event) =>
-                    updateField(
-                      "allowedTerritories",
-                      listFromText(event.target.value),
-                    )
-                  }
-                  className="mt-2 w-full rounded-xl border border-white/12 bg-slate-950/40 px-3 py-2 text-white outline-none"
-                />
-              </label>
-              <div className="md:col-span-2">
-                <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
-                  Restricted uses
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {RESTRICTED_USE_FLAGS.map(([field, label]) => (
-                    <ToggleButton
-                      key={field}
-                      isActive={Boolean(form[field])}
-                      label={label}
-                      onClick={() => updateField(field, !form[field])}
-                    />
-                  ))}
-                </div>
-              </div>
-              {[
-                ["isActive", "Active"],
-                ["isTemplate", "Template"],
-                ["isExclusive", "Exclusive"],
-                ["allowCommercialUse", "Commercial use"],
-                ["allowVideoClips", "Video clips"],
-                ["allowTransfer", "Transfer"],
-                ["allowSublicense", "Sublicense"],
-                ["requireMasterCredit", "Master credit"],
-                ["requirePublishingCredit", "Publishing credit"],
-                ["requireArtistCredit", "Artist credit"],
-                ["requireDrmEncryption", "DRM"],
-                ["allowOfflineListening", "Offline"],
-                ["allowTrackModification", "Track edits"],
-                ["requireApprovalForModification", "Approval for edits"],
-                ["requiresWrittenAgreement", "Written agreement"],
-              ].map(([field, label]) => (
-                <ToggleButton
-                  key={field}
-                  isActive={Boolean(form[field])}
-                  label={label}
-                  onClick={() => updateField(field, !form[field])}
-                />
-              ))}
-              <label className="text-sm text-slate-300 md:col-span-2">
-                Credit requirements
-                <input
-                  value={form.creditRequirements}
-                  onChange={(event) =>
-                    updateField("creditRequirements", event.target.value)
-                  }
-                  className="mt-2 w-full rounded-xl border border-white/12 bg-slate-950/40 px-3 py-2 text-white outline-none"
-                />
-              </label>
-              <div className="grid gap-4 md:col-span-2 md:grid-cols-3">
-                {[
-                  ["masterSplitPercentage", "Master %"],
-                  ["publishingSplitPercentage", "Publishing %"],
-                  ["thirdPartySplitPercentage", "Third-party %"],
-                ].map(([field, label]) => (
-                  <label key={field} className="text-sm text-slate-300">
-                    {label}
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={form[field]}
-                      onChange={(event) =>
-                        updateField(field, event.target.value)
-                      }
-                      className="mt-2 w-full rounded-xl border border-white/12 bg-slate-950/40 px-3 py-2 text-white outline-none"
-                    />
-                  </label>
-                ))}
-              </div>
-              <label className="text-sm text-slate-300 md:col-span-2">
-                Restricted genres
-                <input
-                  value={form.restrictedGenres.join(", ")}
-                  onChange={(event) =>
-                    updateField(
-                      "restrictedGenres",
-                      listFromText(event.target.value),
-                    )
-                  }
-                  className="mt-2 w-full rounded-xl border border-white/12 bg-slate-950/40 px-3 py-2 text-white outline-none"
-                />
-              </label>
-              <label className="text-sm text-slate-300 md:col-span-2">
-                Restricted use cases
-                <input
-                  value={form.restrictedUseCases.join(", ")}
-                  onChange={(event) =>
-                    updateField(
-                      "restrictedUseCases",
-                      listFromText(event.target.value),
-                    )
-                  }
-                  className="mt-2 w-full rounded-xl border border-white/12 bg-slate-950/40 px-3 py-2 text-white outline-none"
-                />
-              </label>
-              <label className="text-sm text-slate-300 md:col-span-2">
-                Additional terms
-                <textarea
-                  value={form.additionalTerms}
-                  onChange={(event) =>
-                    updateField("additionalTerms", event.target.value)
-                  }
-                  className="mt-2 min-h-28 w-full rounded-xl border border-white/12 bg-slate-950/40 px-3 py-2 text-white outline-none"
-                />
-              </label>
-            </div>
-          ) : null}
+        <div className="mt-5 flex flex-wrap gap-2">
+          <ToggleButton
+            isActive={form.isActive}
+            label="Active"
+            onClick={() => updateField("isActive", !form.isActive)}
+          />
+          <ToggleButton
+            isActive={form.isTemplate}
+            label="Template"
+            onClick={() => updateField("isTemplate", !form.isTemplate)}
+          />
         </div>
 
         {validationErrors.length > 0 ? (
@@ -1100,4 +819,4 @@ function AdvancedLicenseManager({ language = "fr" }) {
   );
 }
 
-export default AdvancedLicenseManager;
+export default LicenseManager;

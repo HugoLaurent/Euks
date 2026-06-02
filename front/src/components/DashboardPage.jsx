@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import AdvancedLicenseManager from "@/components/AdvancedLicenseManager.jsx";
+import LicenseManager from "@/components/LicenseManager.jsx";
 import {
   API_BASE_URL,
   AUTH_USER_STORAGE_KEY,
@@ -1158,7 +1158,7 @@ function DashboardPage({ language = "fr", onLogout }) {
     }
 
     if (activeSection === "licenses") {
-      return <AdvancedLicenseManager language={language} />;
+      return <LicenseManager language={language} />;
     }
 
     if (activeSection === "addTrack") {
