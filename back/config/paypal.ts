@@ -15,7 +15,9 @@ const environment = normalizeEnvironment(env.get('PAYPAL_ENVIRONMENT'))
 const clientId = normalizeOptionalString(env.get('PAYPAL_CLIENT_ID'))
 const clientSecret = normalizeOptionalString(env.get('PAYPAL_CLIENT_SECRET'))
 const currencyCode = (
-  env.get('PAYPAL_CURRENCY_CODE') ?? env.get('PAYPAL_CURRENCY') ?? 'EUR'
+  env.get('PAYPAL_CURRENCY_CODE') ??
+  env.get('PAYPAL_CURRENCY') ??
+  'EUR'
 ).toUpperCase()
 
 const paypalConfig = {

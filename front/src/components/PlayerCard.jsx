@@ -38,11 +38,13 @@ function PlayerCard({
   const auroraBandSpread = 0.98 + reactiveEnergy * 0.28;
   const auroraColorSpeed = 0.08 + reactiveEnergy * 0.14;
 
+  const hasAudio = Boolean(track.audioSrc);
+
   const handleSeek = (event) => {
     if (!onSeek) {
       return;
     }
-
+    if (!hasAudio) return;
     onSeek(Number(event.target.value) / 1000);
   };
 
@@ -108,6 +110,11 @@ function PlayerCard({
             <p className="truncate text-sm text-slate-300">
               {track.artist} - {track.vibe}
             </p>
+            {!hasAudio ? (
+              <p className="mt-1 text-xs text-amber-200">
+                Aucun aperçu disponible
+              </p>
+            ) : null}
             <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-200">
               <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
                 {track.duration}
@@ -123,8 +130,11 @@ function PlayerCard({
 
           <button
             type="button"
-            onClick={onTogglePlayback}
-            className="group flex h-14 w-14 items-center justify-center rounded-full border border-cyan-300/45 bg-cyan-300/15 text-cyan-50 shadow-[0_0_24px_rgba(103,232,249,0.16)] transition duration-300 hover:scale-105 hover:bg-cyan-300/25"
+            onClick={() => hasAudio && onTogglePlayback?.()}
+            disabled={!hasAudio}
+            className={`group flex h-14 w-14 items-center justify-center rounded-full border border-cyan-300/45 bg-cyan-300/15 text-cyan-50 shadow-[0_0_24px_rgba(103,232,249,0.16)] transition duration-300 hover:scale-105 hover:bg-cyan-300/25 ${
+              !hasAudio ? "opacity-40 cursor-not-allowed" : ""
+            }`}
             aria-label={isPlaying ? labels.pause : labels.play}
           >
             {isPlaying ? (
@@ -167,8 +177,11 @@ function PlayerCard({
             </button>
             <button
               type="button"
-              onClick={onTogglePlayback}
-              className="group flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/8 text-white shadow-[0_0_20px_rgba(255,255,255,0.08)] transition duration-300 hover:scale-105 hover:bg-white/14"
+              onClick={() => hasAudio && onTogglePlayback?.()}
+              disabled={!hasAudio}
+              className={`group flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/8 text-white shadow-[0_0_20px_rgba(255,255,255,0.08)] transition duration-300 hover:scale-105 hover:bg-white/14 ${
+                !hasAudio ? "opacity-40 cursor-not-allowed" : ""
+              }`}
               aria-label={isPlaying ? labels.pause : labels.play}
             >
               {isPlaying ? (

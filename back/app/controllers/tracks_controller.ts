@@ -120,7 +120,11 @@ export default class TracksController {
     })
 
     if ('error' in coverImagePath) {
-      return this.validationError(response, coverImagePath.error.field, coverImagePath.error.message)
+      return this.validationError(
+        response,
+        coverImagePath.error.field,
+        coverImagePath.error.message
+      )
     }
 
     const audioFilePath = await this.resolveUploadedMediaPath({
@@ -197,7 +201,8 @@ export default class TracksController {
 
     await this.loadRelations(track)
 
-    return response.status(201).send(serialize(TrackTransformer.transform(track)))
+    response.status(201)
+    return serialize(TrackTransformer.transform(track))
   }
 
   async update({ params, request, response, serialize }: HttpContext) {
@@ -209,7 +214,10 @@ export default class TracksController {
       return referenceError
     }
 
-    if (payload.coverImagePath !== undefined || this.getFirstFile(request, ['coverImage', 'cover'])) {
+    if (
+      payload.coverImagePath !== undefined ||
+      this.getFirstFile(request, ['coverImage', 'cover'])
+    ) {
       const coverImagePath = await this.resolveUploadedMediaPath({
         file: this.getFirstFile(request, ['coverImage', 'cover']),
         fallbackPath: payload.coverImagePath,
@@ -220,7 +228,11 @@ export default class TracksController {
       })
 
       if ('error' in coverImagePath) {
-        return this.validationError(response, coverImagePath.error.field, coverImagePath.error.message)
+        return this.validationError(
+          response,
+          coverImagePath.error.field,
+          coverImagePath.error.message
+        )
       }
 
       track.coverImagePath = coverImagePath.path
@@ -240,13 +252,20 @@ export default class TracksController {
       })
 
       if ('error' in audioFilePath) {
-        return this.validationError(response, audioFilePath.error.field, audioFilePath.error.message)
+        return this.validationError(
+          response,
+          audioFilePath.error.field,
+          audioFilePath.error.message
+        )
       }
 
       track.audioFilePath = audioFilePath.path
     }
 
-    if (payload.waveFilePath !== undefined || this.getFirstFile(request, ['waveFile', 'previewWav'])) {
+    if (
+      payload.waveFilePath !== undefined ||
+      this.getFirstFile(request, ['waveFile', 'previewWav'])
+    ) {
       const waveFilePath = await this.resolveUploadedMediaPath({
         file: this.getFirstFile(request, ['waveFile', 'previewWav']),
         fallbackPath: payload.waveFilePath,
@@ -400,10 +419,13 @@ export default class TracksController {
   }
 
   private validationError(response: HttpContext['response'], field: string, message: string) {
-    return response.status(422).send({
+    // Return the response object (truthy) so callers like ensureReferences can
+    // short-circuit on it — response.send() itself returns void.
+    response.status(422).send({
       message,
       errors: [{ field, message }],
     })
+    return response
   }
 
   private getFirstFile(request: HttpContext['request'], fieldNames: string[]) {

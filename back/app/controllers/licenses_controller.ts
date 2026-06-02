@@ -1,9 +1,8 @@
-import loggerConfig from '#config/logger'
 import License from '#models/license'
-import User from '#models/user'
 import LicenseTransformer from '#transformers/license_transformer'
 import { createLicenseValidator, updateLicenseValidator } from '#validators/license'
 import type { HttpContext } from '@adonisjs/core/http'
+import type User from '#models/user'
 
 export default class LicensesController {
   async index({ request, response, serialize, auth }: HttpContext) {
@@ -91,6 +90,13 @@ export default class LicensesController {
       )
     }
 
+    const priceCents = payload.priceCents ?? 0
+    const isPaypalEnabled = payload.isPaypalEnabled ?? true
+
+    if (isPaypalEnabled && priceCents <= 0) {
+      return this.validationError(response, 'priceCents', 'Paid licenses must have a price')
+    }
+
     const license = await License.create({
       title: payload.title,
       userId: auth.user!.id,
@@ -98,6 +104,7 @@ export default class LicensesController {
       isPaypalEnabled: payload.isPaypalEnabled ?? true,
       isActive: payload.isActive ?? true,
       sortOrder: payload.sortOrder ?? 0,
+      priceCents,
 
       audioFormats: payload.audioFormats ?? null,
       trackSeparation: payload.trackSeparation ?? null,
@@ -105,6 +112,7 @@ export default class LicensesController {
       maxStreams: payload.maxStreams ?? null,
       maxDownloads: payload.maxDownloads ?? null,
       maxSales: payload.maxSales ?? null,
+      radioStations: payload.radioStations ?? null,
 
       allowVideoClips: payload.allowVideoClips ?? false,
       videoClipsLimit: payload.videoClipsLimit ?? null,
@@ -172,7 +180,8 @@ export default class LicensesController {
       templateCategory: payload.templateCategory ?? null,
     })
 
-    return response.status(201).send(serialize(LicenseTransformer.transform(license)))
+    response.status(201)
+    return serialize(LicenseTransformer.transform(license))
   }
 
   async update({ params, request, response, serialize, auth }: HttpContext) {
@@ -205,6 +214,13 @@ export default class LicensesController {
       }
     }
 
+    const nextPriceCents = payload.priceCents ?? license.priceCents
+    const nextIsPaypalEnabled = payload.isPaypalEnabled ?? license.isPaypalEnabled
+
+    if (nextIsPaypalEnabled && nextPriceCents <= 0) {
+      return this.validationError(response, 'priceCents', 'Paid licenses must have a price')
+    }
+
     license.merge(payload)
     await license.save()
 
@@ -212,11 +228,9 @@ export default class LicensesController {
   }
 
   async destroy({ params, response, auth }: HttpContext) {
-    console.log(auth.user)
     await auth.authenticate()
 
     const license = await License.findOrFail(params.id)
-    console.log(license);
 
     if (!this.canManageLicense(auth.user!, license)) {
       return response.forbidden({ message: 'You can only delete your own licenses' })
@@ -257,7 +271,6 @@ export default class LicensesController {
   }
 
   private canManageLicense(user: User, license: License) {
-    console.log('User role:', user.role)
     if (user.role === 'owner') {
       return true
     }

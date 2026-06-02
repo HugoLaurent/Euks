@@ -30,6 +30,7 @@ export default class extends BaseSchema {
       table.bigInteger('max_streams').nullable()
       table.bigInteger('max_downloads').nullable()
       table.bigInteger('max_sales').nullable()
+      table.integer('radio_stations').nullable() // null = illimité
 
       // === VIDEO CONTENT ===
       table.boolean('allow_video_clips').notNullable().defaultTo(false)

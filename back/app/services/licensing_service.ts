@@ -14,7 +14,6 @@ export type CheckoutLicenseResolution =
 
 export type TrackLicenseInput = {
   licenseId: number
-  priceCents: number
   isActive?: boolean
 }
 
@@ -43,7 +42,12 @@ export async function resolveCheckoutLicense(
   }
 
   const isTrackLicenseActive = Boolean(attachedLicense.$extras.pivot_is_active)
-  const priceCents = Number(attachedLicense.$extras.pivot_price_cents)
+  const licensePriceCents = Number(license.priceCents)
+  const pivotPriceCents = Number(attachedLicense.$extras.pivot_price_cents)
+  const priceCents =
+    Number.isFinite(licensePriceCents) && licensePriceCents >= 0
+      ? licensePriceCents
+      : pivotPriceCents
 
   if (!license.isActive || !isTrackLicenseActive) {
     return { kind: 'license_unavailable', license }
@@ -73,13 +77,19 @@ export async function syncTrackLicenses(track: Track, licenses: TrackLicenseInpu
   }
 
   const syncPayload = Object.fromEntries(
-    licenses.map((entry) => [
-      entry.licenseId,
-      {
-        price_cents: entry.priceCents,
-        is_active: entry.isActive ?? true,
-      },
-    ])
+    licenses.map((entry) => {
+      const license = existingLicenses.find(
+        (existingLicense) => existingLicense.id === entry.licenseId
+      )!
+
+      return [
+        entry.licenseId,
+        {
+          price_cents: license.priceCents,
+          is_active: entry.isActive ?? true,
+        },
+      ]
+    })
   )
 
   await track.related('licenses').sync(syncPayload)

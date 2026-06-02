@@ -5,7 +5,6 @@ const trackLicenseSchema = vine.object({
     .array(
       vine.object({
         licenseId: vine.number().withoutDecimals().positive(),
-        priceCents: vine.number().withoutDecimals().nonNegative(),
         isActive: vine.boolean().optional(),
       })
     )

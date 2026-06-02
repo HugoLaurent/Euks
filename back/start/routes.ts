@@ -9,6 +9,8 @@
 
 import { middleware } from '#start/kernel'
 import router from '@adonisjs/core/services/router'
+import fs from 'node:fs/promises'
+import { join } from 'node:path'
 
 const AccessTokenController = () => import('#controllers/access_token_controller')
 const LicensesController = () => import('#controllers/licenses_controller')
@@ -84,3 +86,16 @@ router
       .use(middleware.auth())
   })
   .prefix('/api/v1')
+
+// Serve frontend for non-API GET routes (SPA fallback)
+// This returns the built `index.html` from the `public` folder so
+// client-side routing works in production.
+router.get('*', async () => {
+  try {
+    const index = await fs.readFile(join(process.cwd(), 'public', 'index.html'), 'utf8')
+    return index
+  } catch (error) {
+    // If index.html is not found, return a simple JSON to avoid 500s.
+    return { ok: true }
+  }
+})

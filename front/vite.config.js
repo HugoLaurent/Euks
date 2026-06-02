@@ -24,7 +24,27 @@ export default defineConfig(({ mode }) => {
           target: "http://localhost:3333",
           changeOrigin: true,
         },
+        "/audio": {
+          target: "http://localhost:3333",
+          changeOrigin: true,
+        },
+        "/covers": {
+          target: "http://localhost:3333",
+          changeOrigin: true,
+        },
+        "/archives": {
+          target: "http://localhost:3333",
+          changeOrigin: true,
+        },
+        "/seed": {
+          target: "http://localhost:3333",
+          changeOrigin: true,
+        },
       },
+    },
+    build: {
+      outDir: fileURLToPath(new URL("../back/public", import.meta.url)),
+      emptyOutDir: false,
     },
     plugins: [react(), tailwindcss(), createPaypalSandboxPlugin(env)],
   };

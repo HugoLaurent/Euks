@@ -184,10 +184,7 @@ export default class PaypalPaymentsController {
       )
     }
 
-    if (
-      payload.licenseId !== undefined &&
-      paymentOrder.licenseIdSnapshot !== payload.licenseId
-    ) {
+    if (payload.licenseId !== undefined && paymentOrder.licenseIdSnapshot !== payload.licenseId) {
       return this.errorResponse(
         response,
         409,

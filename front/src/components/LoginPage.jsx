@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
+import { API_BASE_URL, AUTH_USER_STORAGE_KEY } from "@/lib";
 
 async function parseResponsePayload(response) {
   const raw = await response.text();
@@ -83,6 +82,7 @@ function LoginPage({ language = "fr" }) {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -101,10 +101,13 @@ function LoginPage({ language = "fr" }) {
         );
       }
 
-      localStorage.setItem("euks.auth.token", authData.token);
-
+      // The token lives in an httpOnly cookie set by the server. We only keep
+      // the non-sensitive user object to drive the logged-in UI state.
       if (authData.user) {
-        localStorage.setItem("euks.auth.user", JSON.stringify(authData.user));
+        localStorage.setItem(
+          AUTH_USER_STORAGE_KEY,
+          JSON.stringify(authData.user),
+        );
       }
 
       const params = new URLSearchParams(window.location.search);

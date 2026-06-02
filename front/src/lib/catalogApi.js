@@ -1,6 +1,8 @@
 import { defaultPreviewSrc } from "@/data";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
+export const AUTH_TOKEN_STORAGE_KEY = "euks.auth.token";
+export const AUTH_USER_STORAGE_KEY = "euks.auth.user";
 const MEDIA_BASE_URL = import.meta.env.VITE_MEDIA_BASE_URL || "";
 const BACKEND_FALLBACK_ORIGIN = "http://localhost:3333";
 const COVER_GRADIENTS = [
@@ -41,10 +43,6 @@ function getMediaOrigin() {
     return getBackendOrigin();
   }
 
-  if (window.location.port === "5173") {
-    return BACKEND_FALLBACK_ORIGIN;
-  }
-
   return window.location.origin;
 }
 
@@ -81,12 +79,41 @@ async function parseJsonPayload(response) {
   }
 }
 
-function getStoredAuthToken() {
+export function getStoredAuthToken() {
   try {
-    return window.localStorage.getItem("euks.auth.token") || "";
+    return window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || "";
   } catch {
     return "";
   }
+}
+
+// Auth is carried by an httpOnly cookie (not readable by JS), so the logged-in
+// state is derived from the stored, non-sensitive user object instead.
+export function getStoredAuthUser() {
+  try {
+    const raw = window.localStorage.getItem(AUTH_USER_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isLoggedIn() {
+  return Boolean(getStoredAuthUser());
+}
+
+export function buildAuthHeaders(token = getStoredAuthToken(), { json = false } = {}) {
+  const headers = {};
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  if (json) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  return headers;
 }
 
 function withAuthHeaders(init = {}) {
@@ -98,6 +125,8 @@ function withAuthHeaders(init = {}) {
   }
 
   return {
+    // Send the httpOnly auth cookie with every API request.
+    credentials: "include",
     ...init,
     headers,
   };
@@ -137,6 +166,14 @@ function createPurchasePrices(cents, language) {
   };
 }
 
+function formatLicensePrice(cents, language) {
+  if (cents === null || cents === undefined) {
+    return null;
+  }
+
+  return formatPrice(cents, language);
+}
+
 function getTierAmountValue(tier, trackPriceCents) {
   const baseAmount = Number(trackPriceCents || 0) / 100;
 
@@ -159,6 +196,28 @@ function getTierAmountValue(tier, trackPriceCents) {
   return null;
 }
 
+function getTierPriceCents(tier, trackPriceCents) {
+  const basePriceCents = Number(trackPriceCents || 0);
+
+  if (tier === "basic") {
+    return basePriceCents;
+  }
+
+  if (tier === "premium") {
+    return basePriceCents + 800;
+  }
+
+  if (tier === "premiumPlus") {
+    return basePriceCents + 1600;
+  }
+
+  if (tier === "unlimited") {
+    return basePriceCents + 2800;
+  }
+
+  return null;
+}
+
 function slugifyValue(value) {
   return String(value || "")
     .trim()
@@ -172,6 +231,17 @@ function formatDuration(durationSeconds) {
   const minutes = Math.floor(safeDuration / 60);
   const seconds = Math.floor(safeDuration % 60);
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+function getResolvedDurationSeconds(track, durationOverrides = {}) {
+  const override = durationOverrides[track.id];
+  const numericOverride = Number(override);
+
+  if (Number.isFinite(numericOverride) && numericOverride > 0) {
+    return numericOverride;
+  }
+
+  return track.durationSeconds;
 }
 
 function buildMediaUrl(path) {
@@ -208,17 +278,19 @@ function getTrackVibe(tags, musicalKey) {
   return mood || genre || musicalKey?.name || "Beat";
 }
 
-function adaptTrack(track, language) {
+function adaptTrack(track, language, durationOverrides) {
   const tags = normalizeTrackTags(track.tags);
   const coverImage = buildMediaUrl(track.coverImagePath);
   const audioSrc = buildMediaUrl(track.audioFilePath) || defaultPreviewSrc;
+  const durationSeconds = getResolvedDurationSeconds(track, durationOverrides);
 
   return {
     id: track.id,
     title: track.title,
-    artist: "EUKS Store",
+    artist: "EUKS",
     vibe: getTrackVibe(tags, track.musicalKey),
-    duration: formatDuration(track.durationSeconds),
+    duration: formatDuration(durationSeconds),
+    durationSeconds,
     bpm: track.bpm ?? 0,
     price: formatPrice(track.priceCents, language),
     priceCents: track.priceCents,
@@ -232,52 +304,90 @@ function adaptTrack(track, language) {
   };
 }
 
-function formatLimit(value, unlimitedLabel) {
+// BeatStars-style usage terms: full numbers ("500,000"), "UNLIMITED" when the
+// underlying value is null/empty (no cap).
+function formatCountOrUnlimited(value, language) {
   if (value === null || value === undefined || value === "") {
-    return unlimitedLabel;
+    return language === "fr" ? "illimité" : "UNLIMITED";
   }
 
-  return new Intl.NumberFormat("en-US", {
-    notation: Number(value) >= 100000 ? "compact" : "standard",
-  }).format(Number(value));
+  return new Intl.NumberFormat(language === "fr" ? "fr-FR" : "en-US").format(
+    Number(value),
+  );
+}
+
+// Deliverable files label, e.g. "MP3", "WAV & MP3", "WAV, STEMS & MP3".
+function formatDeliverables(license, language) {
+  const formats = Array.isArray(license.audioFormats)
+    ? license.audioFormats
+    : [];
+  const parts = [];
+
+  if (formats.includes("wav")) {
+    parts.push("WAV");
+  }
+  if (license.trackSeparation === "stems") {
+    parts.push("STEMS");
+  }
+  formats
+    .filter((format) => format !== "mp3" && format !== "wav")
+    .forEach((format) => parts.push(format.toUpperCase()));
+  if (formats.includes("mp3")) {
+    parts.push("MP3");
+  }
+
+  if (parts.length === 0) {
+    if (!license.isPaypalEnabled) {
+      return language === "fr" ? "NEGOCIATION" : "NEGOTIATE";
+    }
+    return "CUSTOM";
+  }
+
+  if (parts.length === 1) {
+    return parts[0];
+  }
+
+  return `${parts.slice(0, -1).join(", ")} & ${parts[parts.length - 1]}`;
 }
 
 function createLicenseDetails(license, language) {
   const isFrench = language === "fr";
-  const unlimitedLabel = isFrench ? "Illimite" : "Unlimited";
-  const enabledLabel = isFrench ? "Autorise" : "Allowed";
-  const disabledLabel = isFrench ? "Non inclus" : "Not included";
+  const copies = formatCountOrUnlimited(license.maxSales, language);
+  const streams = formatCountOrUnlimited(license.maxStreams, language);
+  const videos = formatCountOrUnlimited(license.videoClipsLimit, language);
+  const stations = formatCountOrUnlimited(license.radioStations, language);
 
-  return [
-    `${isFrench ? "Streams" : "Streams"}: ${formatLimit(
-      license.maxStreams,
-      unlimitedLabel,
-    )}`,
-    `${isFrench ? "Telechargements" : "Downloads"}: ${formatLimit(
-      license.maxDownloads,
-      unlimitedLabel,
-    )}`,
-    `${isFrench ? "Videos" : "Videos"}: ${
-      license.allowVideoClips
-        ? formatLimit(license.videoClipsLimit, unlimitedLabel)
-        : disabledLabel
-    }`,
-    `${isFrench ? "Monetisation" : "Monetization"}: ${
-      license.allowMonetization ? enabledLabel : disabledLabel
-    }`,
-    `${isFrench ? "Remix" : "Remix"}: ${
-      license.allowRemix ? enabledLabel : disabledLabel
-    }`,
-    `${isFrench ? "Live" : "Live"}: ${
-      license.allowLivePerformance ? enabledLabel : disabledLabel
-    }`,
-    `${isFrench ? "Radio" : "Radio"}: ${
-      license.allowRadioAirplay ? enabledLabel : disabledLabel
-    }`,
-    `${isFrench ? "TV" : "TV"}: ${
-      license.allowTelevision ? enabledLabel : disabledLabel
-    }`,
-  ];
+  const details = isFrench
+    ? [
+        "Utilisation pour enregistrement musical",
+        `Distribuer jusqu'à ${copies} copies`,
+        `${streams} streams audio en ligne`,
+      ]
+    : [
+        "Used for Music Recording",
+        `Distribute up to ${copies} copies`,
+        `${streams} Online Audio Streams`,
+      ];
+
+  if (license.allowVideoClips) {
+    details.push(isFrench ? `${videos} clips vidéo` : `${videos} Music Video`);
+  }
+
+  if (license.allowLivePerformance) {
+    details.push(
+      isFrench ? "Performances live monétisées" : "For Profit Live Performances",
+    );
+  }
+
+  if (license.allowRadioAirplay) {
+    details.push(
+      isFrench
+        ? `Droits de diffusion radio (${stations} stations)`
+        : `Radio Broadcasting rights (${stations} Stations)`,
+    );
+  }
+
+  return details;
 }
 
 function resolveLicenseTier(license) {
@@ -292,10 +402,7 @@ function resolveLicenseTier(license) {
     return "basic";
   }
 
-  if (
-    normalizedCategory === "premium" &&
-    normalizedTitle.includes("plus")
-  ) {
+  if (normalizedCategory === "premium" && normalizedTitle.includes("plus")) {
     return "premiumPlus";
   }
 
@@ -329,6 +436,27 @@ function getLicensePriceMeta(license, language, trackPriceCents) {
       amountValue: null,
       checkoutEnabled: false,
       displayPrice: language === "fr" ? "Gratuit" : "Free of use",
+      priceCents: 0,
+      tier,
+    };
+  }
+
+  const attachedPriceCents = Number(license.priceCents);
+  const effectivePriceCents =
+    Number.isFinite(attachedPriceCents) && attachedPriceCents >= 0
+      ? attachedPriceCents
+      : getTierPriceCents(tier, trackPriceCents);
+  const attachedDisplayPrice = formatLicensePrice(
+    effectivePriceCents,
+    language,
+  );
+
+  if (attachedDisplayPrice) {
+    return {
+      amountValue: (effectivePriceCents / 100).toFixed(2),
+      displayPrice: attachedDisplayPrice,
+      priceCents: effectivePriceCents,
+      checkoutEnabled: Boolean(license.isPaypalEnabled),
       tier,
     };
   }
@@ -349,18 +477,17 @@ function getLicensePriceMeta(license, language, trackPriceCents) {
           ? "Negocier"
           : "Negotiate"
         : rawPrice,
+    priceCents: effectivePriceCents,
     tier,
   };
 }
 
-export function adaptLicensesToPurchaseCards(licenses, language, trackPriceCents) {
+export function adaptLicensesToPurchaseCards(
+  licenses,
+  language,
+  trackPriceCents,
+) {
   return licenses.map((license) => {
-    const formats = Array.isArray(license.audioFormats)
-      ? license.audioFormats
-      : [];
-    const separation = license.trackSeparation
-      ? ` (${license.trackSeparation.replaceAll("_", " ")})`
-      : "";
     const priceMeta = getLicensePriceMeta(license, language, trackPriceCents);
 
     return {
@@ -369,12 +496,20 @@ export function adaptLicensesToPurchaseCards(licenses, language, trackPriceCents
         license.id ?? (slugifyValue(license.title) || "license"),
       ),
       title: license.title,
-      format: `${formats.join(", ").toUpperCase() || "CUSTOM"}${separation}`,
+      format: formatDeliverables(license, language),
       details: createLicenseDetails(license, language),
       ...priceMeta,
       isFree: !license.isPaypalEnabled,
     };
   });
+}
+
+function getLowestPricedLicenseCard(licenseCards) {
+  return licenseCards
+    .filter((card) => Number.isFinite(Number(card.priceCents)))
+    .sort(
+      (left, right) => Number(left.priceCents) - Number(right.priceCents),
+    )[0];
 }
 
 function groupTagsByType(tags) {
@@ -516,35 +651,28 @@ export async function fetchLicenses(params = {}) {
   return [];
 }
 
-export async function createLicense(data, authToken) {
+// Auth flows through the httpOnly cookie (added by withAuthHeaders), so these
+// no longer take/send a bearer token.
+export async function createLicense(data) {
   return fetchJson(`${API_BASE_URL}/licenses`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${authToken}`,
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
 }
 
-export async function updateLicense(licenseId, data, authToken) {
+export async function updateLicense(licenseId, data) {
   return fetchJson(`${API_BASE_URL}/licenses/${licenseId}`, {
     method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${authToken}`,
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
 }
 
-export async function deleteLicense(licenseId, authToken) {
+export async function deleteLicense(licenseId) {
   return fetchJson(`${API_BASE_URL}/licenses/${licenseId}`, {
     method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${authToken}`,
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
   });
 }
 
@@ -557,19 +685,26 @@ export async function fetchCatalog() {
   };
 }
 
-export function adaptCatalogTracks(
-  tracks,
-  language,
-  licenses = [],
-  licenseError = "",
-) {
-  return tracks.map((track) => ({
-    ...adaptTrack(track, language),
-    licenseCards: adaptLicensesToPurchaseCards(
-      licenses,
+export function adaptCatalogTracks(tracks, language, durationOverrides = {}) {
+  return tracks.map((track) => {
+    const attachedLicenses = Array.isArray(track.licenses)
+      ? track.licenses
+      : [];
+    const licenseCards = adaptLicensesToPurchaseCards(
+      attachedLicenses,
       language,
       track.priceCents,
-    ),
-    licenseError,
-  }));
+    );
+    const lowestLicenseCard = getLowestPricedLicenseCard(licenseCards);
+    const adaptedTrack = adaptTrack(track, language, durationOverrides);
+
+    return {
+      ...adaptedTrack,
+      price: lowestLicenseCard?.displayPrice ?? adaptedTrack.price,
+      displayPriceCents:
+        lowestLicenseCard?.priceCents ?? adaptedTrack.priceCents,
+      licenseCards,
+      licenseError: "",
+    };
+  });
 }

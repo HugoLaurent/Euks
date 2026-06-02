@@ -13,11 +13,16 @@ import {
 } from "@/components";
 import { defaultPreviewSrc } from "@/data";
 import { useReactiveAudioPlayer } from "@/hooks";
-import { adaptCatalogTracks, fetchCatalog, fetchLicenses } from "@/lib";
+import {
+  API_BASE_URL,
+  AUTH_USER_STORAGE_KEY,
+  adaptCatalogTracks,
+  fetchCatalog,
+  getStoredAuthUser,
+} from "@/lib";
 
 const LOGIN_URL = import.meta.env.VITE_LOGIN_URL || "/login";
 const DASHBOARD_URL = import.meta.env.VITE_DASHBOARD_URL || "/dashboard";
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
 
 const EMPTY_PLAYER_TRACK = {
   id: 0,
@@ -64,10 +69,46 @@ function FlagGb() {
   );
 }
 
+function readAudioMetadataDuration(audioSrc) {
+  return new Promise((resolve) => {
+    if (!audioSrc) {
+      resolve(null);
+      return;
+    }
+
+    const audio = new Audio();
+
+    const cleanup = () => {
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      audio.removeEventListener("error", handleError);
+      audio.removeAttribute("src");
+      audio.load();
+    };
+
+    const handleLoadedMetadata = () => {
+      const durationSeconds = Math.round(audio.duration);
+      cleanup();
+      resolve(
+        Number.isFinite(durationSeconds) && durationSeconds > 0
+          ? durationSeconds
+          : null,
+      );
+    };
+
+    const handleError = () => {
+      cleanup();
+      resolve(null);
+    };
+
+    audio.preload = "metadata";
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+    audio.addEventListener("error", handleError);
+    audio.src = audioSrc;
+  });
+}
+
 function App() {
-  const [authToken, setAuthToken] = useState(
-    () => localStorage.getItem("euks.auth.token") || "",
-  );
+  const [authUser, setAuthUser] = useState(() => getStoredAuthUser());
   const [isLogoutLoading, setIsLogoutLoading] = useState(false);
   const [language, setLanguage] = useState("fr");
   const [isMobilePlayerOpen, setIsMobilePlayerOpen] = useState(false);
@@ -83,20 +124,14 @@ function App() {
     genre: [],
   });
   const [catalogTracksRaw, setCatalogTracksRaw] = useState([]);
-  const [licenseTemplates, setLicenseTemplates] = useState([]);
-  const [licenseError, setLicenseError] = useState("");
+  const [audioDurationsByTrackId, setAudioDurationsByTrackId] = useState({});
   const isLoginPage = window.location.pathname === "/login";
   const isDashboardPage = window.location.pathname === "/dashboard";
-  const isAuthenticated = Boolean(authToken);
+  const isAuthenticated = Boolean(authUser);
   const catalogTracks = useMemo(
     () =>
-      adaptCatalogTracks(
-        catalogTracksRaw,
-        language,
-        licenseTemplates,
-        licenseError,
-      ),
-    [catalogTracksRaw, language, licenseError, licenseTemplates],
+      adaptCatalogTracks(catalogTracksRaw, language, audioDurationsByTrackId),
+    [audioDurationsByTrackId, catalogTracksRaw, language],
   );
   const selectedTrack =
     catalogTracks.find((track) => track.id === selectedTrackId) ??
@@ -161,6 +196,16 @@ function App() {
     setIsLoginModalOpen(true);
   }, [isAuthenticated]);
 
+  // Redirect unauthenticated visitors away from the dashboard. Navigating in an
+  // effect (rather than during render) keeps the render pure.
+  useEffect(() => {
+    if (isDashboardPage && !isAuthenticated) {
+      const loginUrl = new URL(LOGIN_URL, window.location.origin);
+      loginUrl.searchParams.set("redirect", "/dashboard");
+      window.location.href = loginUrl.href;
+    }
+  }, [isDashboardPage, isAuthenticated]);
+
   const handleLoginModalClose = useCallback(() => {
     setIsLoginModalOpen(false);
   }, []);
@@ -184,30 +229,29 @@ function App() {
   }, []);
 
   const handleLogout = useCallback(async () => {
-    if (!authToken || isLogoutLoading) {
+    if (!isAuthenticated || isLogoutLoading) {
       return;
     }
 
     setIsLogoutLoading(true);
 
     try {
+      // Auth is carried by the httpOnly cookie; credentials:include sends it so
+      // the server can revoke the token and clear the cookie.
       await fetch(`${API_BASE_URL}/auth/logout`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          "Content-Type": "application/json",
-        },
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
       });
     } catch {
       // Clear local auth state even if remote logout fails.
     } finally {
-      localStorage.removeItem("euks.auth.token");
-      localStorage.removeItem("euks.auth.user");
-      setAuthToken("");
+      localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+      setAuthUser(null);
       setIsLoginModalOpen(false);
       setIsLogoutLoading(false);
     }
-  }, [authToken, isLogoutLoading]);
+  }, [isAuthenticated, isLogoutLoading]);
 
   const visibleSongs = useMemo(
     () =>
@@ -258,39 +302,40 @@ function App() {
 
   useEffect(() => {
     let isCancelled = false;
+    const tracksToHydrate = catalogTracks.filter((track) => {
+      const durationSeconds = Number(track.durationSeconds);
 
-    async function loadLicenses() {
-      try {
-        setLicenseError("");
-        const licenses = await fetchLicenses({
-          activeOnly: true,
-          isTemplate: true,
-        });
+      return (
+        track.id &&
+        track.audioSrc &&
+        (!Number.isFinite(durationSeconds) || durationSeconds <= 0) &&
+        !audioDurationsByTrackId[track.id]
+      );
+    });
 
-        if (isCancelled) {
-          return;
-        }
+    tracksToHydrate.forEach(async (track) => {
+      const durationSeconds = await readAudioMetadataDuration(track.audioSrc);
 
-        setLicenseTemplates(licenses);
-      } catch (error) {
-        if (isCancelled) {
-          return;
-        }
-
-        setLicenseTemplates([]);
-        setLicenseError(
-          error.message ||
-            "Impossible de charger les licences depuis le backend.",
-        );
+      if (isCancelled || !durationSeconds) {
+        return;
       }
-    }
 
-    loadLicenses();
+      setAudioDurationsByTrackId((previousDurations) => {
+        if (previousDurations[track.id]) {
+          return previousDurations;
+        }
+
+        return {
+          ...previousDurations,
+          [track.id]: durationSeconds,
+        };
+      });
+    });
 
     return () => {
       isCancelled = true;
     };
-  }, []);
+  }, [audioDurationsByTrackId, catalogTracks]);
 
   useEffect(() => {
     if (!isLoginModalOpen) {
@@ -311,14 +356,14 @@ function App() {
   }, [isLoginModalOpen]);
 
   useEffect(() => {
-    function syncAuthToken() {
-      setAuthToken(localStorage.getItem("euks.auth.token") || "");
+    function syncAuthUser() {
+      setAuthUser(getStoredAuthUser());
     }
 
-    window.addEventListener("storage", syncAuthToken);
+    window.addEventListener("storage", syncAuthUser);
 
     return () => {
-      window.removeEventListener("storage", syncAuthToken);
+      window.removeEventListener("storage", syncAuthUser);
     };
   }, []);
 
@@ -441,9 +486,7 @@ function App() {
 
   if (isDashboardPage) {
     if (!isAuthenticated) {
-      const loginUrl = new URL(LOGIN_URL, window.location.origin);
-      loginUrl.searchParams.set("redirect", "/dashboard");
-      window.location.href = loginUrl.href;
+      // Redirect is handled by the effect above; render nothing meanwhile.
       return null;
     }
 
@@ -576,7 +619,7 @@ function App() {
               }}
             />
             <div
-              className="absolute inset-0 hidden bg-cover bg-center bg-no-repeat transition-transform duration-200 ease-out will-change-transform xl:block"
+              className="absolute inset-0 hidden bg-cover bg-center bg-no-repeat transition-transform duration-200 ease-out will-change-transform xl:block opacity-35"
               style={{
                 backgroundImage: `linear-gradient(rgba(2, 6, 23, 0.76), rgba(2, 6, 23, 0.76)), url(${bgTags})`,
                 transform: `perspective(1200px) rotateX(${tagParallax.rotateX}deg) rotateY(${tagParallax.rotateY}deg) scale3d(1.1, 1.1, 1.1)`,

@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import AdvancedLicenseManager from "@/components/AdvancedLicenseManager.jsx";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
+import {
+  API_BASE_URL,
+  AUTH_USER_STORAGE_KEY,
+  buildAuthHeaders,
+  isLoggedIn,
+} from "@/lib";
 
 function readStoredUser() {
   try {
-    const raw = localStorage.getItem("euks.auth.user");
+    const raw = localStorage.getItem(AUTH_USER_STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -56,23 +60,70 @@ function isAcceptedFileForZone(zone, file) {
   return false;
 }
 
-function parseEuroToCents(value) {
-  const normalized = String(value || "")
-    .trim()
-    .replace(/\s+/g, "")
-    .replace(",", ".");
+function getLicensePriceCents(license) {
+  const priceCents = Number(license?.priceCents);
 
-  if (!normalized) {
+  return Number.isFinite(priceCents) && priceCents >= 0 ? priceCents : null;
+}
+
+function getLowestLicensePriceCents(licenses) {
+  const prices = licenses
+    .map((license) => getLicensePriceCents(license))
+    .filter((priceCents) => priceCents !== null);
+
+  if (prices.length === 0) {
     return null;
   }
 
-  const amount = Number.parseFloat(normalized);
+  return Math.min(...prices);
+}
 
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return null;
+function formatLicensePrice(cents) {
+  const priceCents = Number(cents);
+
+  if (!Number.isFinite(priceCents)) {
+    return "-";
   }
 
-  return Math.round(amount * 100);
+  return `${(priceCents / 100).toFixed(2)} EUR`;
+}
+
+function readAudioFileDuration(file) {
+  return new Promise((resolve) => {
+    if (!file) {
+      resolve(null);
+      return;
+    }
+
+    const audio = new Audio();
+    const objectUrl = URL.createObjectURL(file);
+
+    const cleanup = () => {
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      audio.removeEventListener("error", handleError);
+      URL.revokeObjectURL(objectUrl);
+    };
+
+    const handleLoadedMetadata = () => {
+      const durationSeconds = Math.round(audio.duration);
+      cleanup();
+      resolve(
+        Number.isFinite(durationSeconds) && durationSeconds > 0
+          ? durationSeconds
+          : null,
+      );
+    };
+
+    const handleError = () => {
+      cleanup();
+      resolve(null);
+    };
+
+    audio.preload = "metadata";
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+    audio.addEventListener("error", handleError);
+    audio.src = objectUrl;
+  });
 }
 
 async function parseResponsePayload(response) {
@@ -94,14 +145,17 @@ function DashboardPage({ language = "fr", onLogout }) {
   const [tracks, setTracks] = useState([]);
   const [musicalKeys, setMusicalKeys] = useState([]);
   const [availableTags, setAvailableTags] = useState([]);
+  const [availableLicenses, setAvailableLicenses] = useState([]);
   const [tracksLoading, setTracksLoading] = useState(true);
   const [taxonomyLoading, setTaxonomyLoading] = useState(true);
+  const [licensesLoading, setLicensesLoading] = useState(false);
   const [tracksError, setTracksError] = useState("");
   const [taxonomyError, setTaxonomyError] = useState("");
+  const [licensesError, setLicensesError] = useState("");
   const [storedUser, setStoredUser] = useState(() => readStoredUser());
   const [selectedMusicalKeyId, setSelectedMusicalKeyId] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState([]);
-  const [trackPriceEuro, setTrackPriceEuro] = useState("");
+  const [selectedLicenseIds, setSelectedLicenseIds] = useState([]);
   const [trackForm, setTrackForm] = useState({
     title: "",
     bpm: "",
@@ -175,6 +229,55 @@ function DashboardPage({ language = "fr", onLogout }) {
       isCancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    if (activeSection !== "addTrack") {
+      return () => {
+        isCancelled = true;
+      };
+    }
+
+    async function fetchLicenses() {
+      setLicensesLoading(true);
+      setLicensesError("");
+
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/licenses?activeOnly=true`,
+          {
+            credentials: "include",
+            headers: buildAuthHeaders(),
+          },
+        );
+        const payload = await parseResponsePayload(response);
+
+        if (!response.ok) {
+          throw new Error(payload?.message || "Unable to load licenses.");
+        }
+
+        if (!isCancelled) {
+          setAvailableLicenses(toArrayPayload(payload));
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setAvailableLicenses([]);
+          setLicensesError(error.message || "Unable to load licenses.");
+        }
+      } finally {
+        if (!isCancelled) {
+          setLicensesLoading(false);
+        }
+      }
+    }
+
+    fetchLicenses();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeSection]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -301,9 +404,9 @@ function DashboardPage({ language = "fr", onLogout }) {
             fields: {
               title: "Titre",
               bpm: "BPM",
-              price: "Prix (EUR)",
               musicalKey: "Clé musicale",
               linkedTags: "Tags à lier",
+              linkedLicenses: "Licences à attacher",
               cover: "Cover (image)",
               mp3: "Fichier MP3",
               wav: "Fichier WAV",
@@ -312,16 +415,16 @@ function DashboardPage({ language = "fr", onLogout }) {
             musicalKeyPlaceholder: "Sélectionner une clé",
             musicalKeyLoading: "Chargement des clés...",
             musicalKeyUnavailable: "Aucune clé disponible.",
-            pricePlaceholder: "Ex: 29,99",
-            priceInvalid: "Prix invalide",
-            priceCentsPreview: "Valeur backend (centimes)",
             tagsLoading: "Chargement des tags...",
             noTags: "Aucun tag disponible.",
+            licensesLoading: "Chargement des licences...",
+            noLicenses:
+              "Aucune licence active disponible. Crée d'abord une licence.",
             dropHint: "Glisse un fichier ici ou clique pour sélectionner",
             selected: "Sélectionné",
             invalidType: "Type de fichier invalide.",
             required:
-              "Les 3 formats audio + la cover + la clé + au moins un tag sont requis.",
+              "Les 3 formats audio + la cover + la clé + au moins un tag + au moins une licence sont requis.",
             tokenRequired: "Tu dois être connecté pour créer une musique.",
             saveSuccess: "Musique enregistrée avec succès.",
             submit: "Enregistrer",
@@ -419,9 +522,9 @@ function DashboardPage({ language = "fr", onLogout }) {
             fields: {
               title: "Title",
               bpm: "BPM",
-              price: "Price (EUR)",
               musicalKey: "Musical key",
               linkedTags: "Linked tags",
+              linkedLicenses: "Licenses to attach",
               cover: "Cover (image)",
               mp3: "MP3 file",
               wav: "WAV file",
@@ -430,16 +533,15 @@ function DashboardPage({ language = "fr", onLogout }) {
             musicalKeyPlaceholder: "Select key",
             musicalKeyLoading: "Loading keys...",
             musicalKeyUnavailable: "No musical key available.",
-            pricePlaceholder: "Ex: 29.99",
-            priceInvalid: "Invalid price",
-            priceCentsPreview: "Backend value (cents)",
             tagsLoading: "Loading tags...",
             noTags: "No tags available.",
+            licensesLoading: "Loading licenses...",
+            noLicenses: "No active license available. Create a license first.",
             dropHint: "Drop a file here or click to browse",
             selected: "Selected",
             invalidType: "Invalid file type.",
             required:
-              "All 3 audio formats + cover + key + at least one tag are required.",
+              "All 3 audio formats + cover + key + at least one tag + at least one license are required.",
             tokenRequired: "You must be signed in to create a track.",
             saveSuccess: "Track saved successfully.",
             submit: "Save",
@@ -596,6 +698,29 @@ function DashboardPage({ language = "fr", onLogout }) {
     );
   }
 
+  function toggleLicenseSelection(licenseId) {
+    setSelectedLicenseIds((previous) =>
+      previous.includes(licenseId)
+        ? previous.filter((id) => id !== licenseId)
+        : [...previous, licenseId],
+    );
+  }
+
+  function getSelectedLicenses() {
+    return selectedLicenseIds
+      .map((licenseId) =>
+        availableLicenses.find((license) => license.id === licenseId),
+      )
+      .filter(Boolean);
+  }
+
+  function buildSelectedLicensePayload() {
+    return selectedLicenseIds.map((licenseId) => ({
+      licenseId,
+      isActive: true,
+    }));
+  }
+
   async function handleTagSubmit(event) {
     event.preventDefault();
 
@@ -603,9 +728,7 @@ function DashboardPage({ language = "fr", onLogout }) {
       return;
     }
 
-    const authToken = localStorage.getItem("euks.auth.token") || "";
-
-    if (!authToken) {
+    if (!isLoggedIn()) {
       setTagSubmitState({
         isLoading: false,
         error: copy.addTags.tokenRequired,
@@ -629,10 +752,8 @@ function DashboardPage({ language = "fr", onLogout }) {
     try {
       const response = await fetch(`${API_BASE_URL}/tags`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          "Content-Type": "application/json",
-        },
+        credentials: "include",
+        headers: buildAuthHeaders(undefined, { json: true }),
         body: JSON.stringify({
           name,
           type: tagForm.type,
@@ -686,9 +807,7 @@ function DashboardPage({ language = "fr", onLogout }) {
       return;
     }
 
-    const authToken = localStorage.getItem("euks.auth.token") || "";
-
-    if (!authToken) {
+    if (!isLoggedIn()) {
       setTagSubmitState({
         isLoading: false,
         error: copy.addTags.tokenRequired,
@@ -707,10 +826,8 @@ function DashboardPage({ language = "fr", onLogout }) {
     try {
       const response = await fetch(`${API_BASE_URL}/tags/${tag.id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          "Content-Type": "application/json",
-        },
+        credentials: "include",
+        headers: buildAuthHeaders(undefined, { json: true }),
       });
 
       const payload = await parseResponsePayload(response);
@@ -747,7 +864,10 @@ function DashboardPage({ language = "fr", onLogout }) {
       return;
     }
 
-    const parsedPriceCents = parseEuroToCents(trackPriceEuro);
+    const selectedLicensePayload = buildSelectedLicensePayload();
+    const selectedLicensePriceCents = getLowestLicensePriceCents(
+      getSelectedLicenses(),
+    );
     const hasAllRequiredFiles =
       Boolean(uploadFiles.cover) &&
       Boolean(uploadFiles.mp3) &&
@@ -755,14 +875,18 @@ function DashboardPage({ language = "fr", onLogout }) {
       Boolean(uploadFiles.stemsZip);
     const hasTrackTaxonomy =
       Boolean(selectedMusicalKeyId) && selectedTagIds.length > 0;
+    const hasSelectedLicenses = selectedLicensePayload.length > 0;
 
-    if (!hasAllRequiredFiles || !hasTrackTaxonomy || !parsedPriceCents) {
+    if (
+      !hasAllRequiredFiles ||
+      !hasTrackTaxonomy ||
+      selectedLicensePriceCents === null ||
+      !hasSelectedLicenses
+    ) {
       return;
     }
 
-    const authToken = localStorage.getItem("euks.auth.token") || "";
-
-    if (!authToken) {
+    if (!isLoggedIn()) {
       setTrackSubmitState({
         isLoading: false,
         error: copy.addTrack.tokenRequired,
@@ -779,10 +903,16 @@ function DashboardPage({ language = "fr", onLogout }) {
 
     try {
       const formData = new FormData();
+      const durationSeconds = await readAudioFileDuration(uploadFiles.mp3);
+
       formData.append("title", trackForm.title.trim());
       formData.append("bpm", String(Number(trackForm.bpm) || 0));
-      formData.append("priceCents", String(parsedPriceCents));
+      formData.append("priceCents", String(selectedLicensePriceCents));
       formData.append("musicalKeyId", selectedMusicalKeyId);
+
+      if (durationSeconds) {
+        formData.append("durationSeconds", String(durationSeconds));
+      }
 
       selectedTagIds.forEach((tagId) => {
         formData.append("tagIds[]", String(tagId));
@@ -795,9 +925,8 @@ function DashboardPage({ language = "fr", onLogout }) {
 
       const response = await fetch(`${API_BASE_URL}/tracks`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
+        credentials: "include",
+        headers: buildAuthHeaders(),
         body: formData,
       });
 
@@ -805,6 +934,34 @@ function DashboardPage({ language = "fr", onLogout }) {
 
       if (!response.ok) {
         throw new Error(payload?.message || "Unable to create track.");
+      }
+
+      const createdTrack = payload?.data ?? payload;
+      const createdTrackId = createdTrack?.id;
+
+      if (!createdTrackId) {
+        throw new Error(
+          "Track created, but the response did not include an id.",
+        );
+      }
+
+      const licensesResponse = await fetch(
+        `${API_BASE_URL}/tracks/${createdTrackId}/licenses`,
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: buildAuthHeaders(undefined, { json: true }),
+          body: JSON.stringify({
+            licenses: selectedLicensePayload,
+          }),
+        },
+      );
+      const licensesPayload = await parseResponsePayload(licensesResponse);
+
+      if (!licensesResponse.ok) {
+        throw new Error(
+          licensesPayload?.message || "Unable to attach licenses.",
+        );
       }
 
       const tracksResponse = await fetch(
@@ -820,9 +977,9 @@ function DashboardPage({ language = "fr", onLogout }) {
         title: "",
         bpm: "",
       });
-      setTrackPriceEuro("");
       setSelectedMusicalKeyId("");
       setSelectedTagIds([]);
+      setSelectedLicenseIds([]);
       setUploadFiles({
         cover: null,
         mp3: null,
@@ -1005,15 +1162,18 @@ function DashboardPage({ language = "fr", onLogout }) {
     }
 
     if (activeSection === "addTrack") {
-      const parsedPriceCents = parseEuroToCents(trackPriceEuro);
       const hasAllRequiredFiles =
         Boolean(uploadFiles.cover) &&
         Boolean(uploadFiles.mp3) &&
         Boolean(uploadFiles.wav) &&
         Boolean(uploadFiles.stemsZip);
-      const hasValidPrice = Boolean(parsedPriceCents);
       const hasTrackTaxonomy =
         Boolean(selectedMusicalKeyId) && selectedTagIds.length > 0;
+      const selectedLicenses = getSelectedLicenses();
+      const selectedLicensePriceCents =
+        getLowestLicensePriceCents(selectedLicenses);
+      const hasSelectedLicenses =
+        selectedLicenseIds.length > 0 && selectedLicensePriceCents !== null;
 
       return (
         <section className="rounded-2xl border border-white/10 bg-slate-900/55 p-5">
@@ -1056,28 +1216,6 @@ function DashboardPage({ language = "fr", onLogout }) {
                 className="mt-2 w-full rounded-xl border border-white/12 bg-white/5 px-3 py-2 text-white outline-none"
                 required
               />
-            </label>
-            <label className="text-sm text-slate-300">
-              {copy.addTrack.fields.price}
-              <input
-                type="text"
-                inputMode="decimal"
-                value={trackPriceEuro}
-                onChange={(event) => setTrackPriceEuro(event.target.value)}
-                placeholder={copy.addTrack.pricePlaceholder}
-                className="mt-2 w-full rounded-xl border border-white/12 bg-white/5 px-3 py-2 text-white outline-none"
-              />
-              <div className="mt-2 text-xs text-slate-400">
-                {parsedPriceCents ? (
-                  <span>
-                    {copy.addTrack.priceCentsPreview}: {parsedPriceCents}
-                  </span>
-                ) : trackPriceEuro ? (
-                  <span className="text-amber-200">
-                    {copy.addTrack.priceInvalid}
-                  </span>
-                ) : null}
-              </div>
             </label>
             <label className="text-sm text-slate-300">
               {copy.addTrack.fields.musicalKey}
@@ -1154,6 +1292,70 @@ function DashboardPage({ language = "fr", onLogout }) {
                 ) : null}
               </div>
             </label>
+            <fieldset className="text-sm text-slate-300 md:col-span-2">
+              <legend>{copy.addTrack.fields.linkedLicenses}</legend>
+              <div className="mt-2 rounded-2xl border border-white/12 bg-white/5 p-3">
+                {licensesLoading ? (
+                  <p className="text-xs text-slate-400">
+                    {copy.addTrack.licensesLoading}
+                  </p>
+                ) : null}
+                {!licensesLoading && licensesError ? (
+                  <p className="text-xs text-rose-200">{licensesError}</p>
+                ) : null}
+                {!licensesLoading &&
+                !licensesError &&
+                availableLicenses.length === 0 ? (
+                  <p className="text-xs text-slate-400">
+                    {copy.addTrack.noLicenses}
+                  </p>
+                ) : null}
+                {!licensesLoading &&
+                !licensesError &&
+                availableLicenses.length > 0 ? (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {availableLicenses.map((license) => {
+                      const isSelected = selectedLicenseIds.includes(
+                        license.id,
+                      );
+
+                      return (
+                        <div
+                          key={license.id}
+                          className={`rounded-2xl border p-3 transition ${
+                            isSelected
+                              ? "border-cyan-300/35 bg-cyan-400/12"
+                              : "border-white/12 bg-white/5"
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => toggleLicenseSelection(license.id)}
+                            className={`w-full text-left text-sm font-semibold transition ${
+                              isSelected ? "text-cyan-100" : "text-slate-100"
+                            }`}
+                          >
+                            {license.title}
+                          </button>
+                          <p className="mt-1 text-xs text-slate-400">
+                            {(license.audioFormats || [])
+                              .join(", ")
+                              .toUpperCase() || "CUSTOM"}
+                            {license.templateCategory
+                              ? ` · ${license.templateCategory}`
+                              : ""}
+                          </p>
+
+                          <p className="mt-2 text-xs font-semibold text-cyan-100">
+                            {formatLicensePrice(license.priceCents)}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            </fieldset>
             <label className="text-sm text-slate-300 md:col-span-2">
               {copy.addTrack.fields.cover}
               <div className="mt-2">
@@ -1197,9 +1399,11 @@ function DashboardPage({ language = "fr", onLogout }) {
             <div className="md:col-span-2 flex items-center justify-between gap-3 pt-2">
               <div className="text-xs">
                 <p
-                  className={`${hasAllRequiredFiles && hasTrackTaxonomy && hasValidPrice ? "text-slate-400" : "text-amber-200"}`}
+                  className={`${hasAllRequiredFiles && hasTrackTaxonomy && hasSelectedLicenses ? "text-slate-400" : "text-amber-200"}`}
                 >
-                  {hasAllRequiredFiles && hasTrackTaxonomy && hasValidPrice
+                  {hasAllRequiredFiles &&
+                  hasTrackTaxonomy &&
+                  hasSelectedLicenses
                     ? copy.addTrack.helper
                     : copy.addTrack.required}
                 </p>
@@ -1217,7 +1421,7 @@ function DashboardPage({ language = "fr", onLogout }) {
                 disabled={
                   !hasAllRequiredFiles ||
                   !hasTrackTaxonomy ||
-                  !hasValidPrice ||
+                  !hasSelectedLicenses ||
                   trackSubmitState.isLoading
                 }
                 className="rounded-full border border-cyan-300/35 bg-cyan-400/20 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/28"

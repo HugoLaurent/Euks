@@ -13,10 +13,11 @@ import {
   createLicense,
   deleteLicense,
   fetchLicenses,
+  isLoggedIn,
   updateLicense,
 } from "@/lib";
 
-const AUDIO_FORMATS = ["mp3", "wav", "Pistes séparées (stems)"];
+const AUDIO_FORMATS = ["mp3", "wav", "flac", "aac", "ogg", "aiff"];
 const PLATFORMS = [
   "tiktok",
   "youtube",
@@ -30,6 +31,7 @@ const TEMPLATE_CATEGORIES = ["standard", "premium", "exclusive", "custom"];
 const INITIAL_FORM = {
   title: "",
   description: "",
+  priceEuro: "",
   isActive: true,
   isTemplate: false,
   templateCategory: "custom",
@@ -135,6 +137,7 @@ function toFormValue(license) {
     allowedTerritories: license.allowedTerritories || ["WORLDWIDE"],
     restrictedGenres: license.restrictedGenres || [],
     restrictedUseCases: license.restrictedUseCases || [],
+    priceEuro: formatCentsToEuroInput(license.priceCents),
     maxStreams: license.maxStreams ?? "",
     maxDownloads: license.maxDownloads ?? "",
     maxSales: license.maxSales ?? "",
@@ -153,6 +156,45 @@ function nullableNumber(value) {
   return Number.isFinite(numberValue) ? numberValue : null;
 }
 
+function parseEuroToCents(value, { allowZero = false } = {}) {
+  const normalized = String(value || "")
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(",", ".");
+
+  if (!normalized) {
+    return null;
+  }
+
+  const amount = Number.parseFloat(normalized);
+
+  if (!Number.isFinite(amount) || amount < 0 || (!allowZero && amount === 0)) {
+    return null;
+  }
+
+  return Math.round(amount * 100);
+}
+
+function formatCentsToEuroInput(cents) {
+  const amount = Number(cents);
+
+  if (!Number.isFinite(amount)) {
+    return "";
+  }
+
+  return (amount / 100).toFixed(2);
+}
+
+function formatPriceLabel(cents) {
+  const amount = Number(cents);
+
+  if (!Number.isFinite(amount)) {
+    return "-";
+  }
+
+  return `${(amount / 100).toFixed(2)} EUR`;
+}
+
 function listFromText(value) {
   return String(value || "")
     .split(",")
@@ -161,8 +203,11 @@ function listFromText(value) {
 }
 
 function formToPayload(form) {
+  const { priceEuro, ...licenseFields } = form;
+
   return {
-    ...form,
+    ...licenseFields,
+    priceCents: parseEuroToCents(priceEuro, { allowZero: true }) ?? 0,
     maxStreams: nullableNumber(form.maxStreams),
     maxDownloads: nullableNumber(form.maxDownloads),
     maxSales: nullableNumber(form.maxSales),
@@ -183,6 +228,7 @@ function formToPayload(form) {
 
 function validateForm(form) {
   const errors = [];
+  const priceCents = parseEuroToCents(form.priceEuro, { allowZero: true });
   const splitTotal =
     Number(form.masterSplitPercentage || 0) +
     Number(form.publishingSplitPercentage || 0) +
@@ -190,6 +236,14 @@ function validateForm(form) {
 
   if (!form.title.trim() || form.title.length > 160) {
     errors.push("Title is required and must stay under 160 characters.");
+  }
+
+  if (priceCents === null) {
+    errors.push("Price must be a valid amount.");
+  }
+
+  if (form.isPaypalEnabled && (!priceCents || priceCents <= 0)) {
+    errors.push("Paid licenses must have a price greater than 0.");
   }
 
   if (splitTotal > 100) {
@@ -238,7 +292,7 @@ function AdvancedLicenseManager({ language = "fr" }) {
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
   const [activeOnly, setActiveOnly] = useState(true);
-  const [templatesOnly, setTemplatesOnly] = useState(true);
+  const [templatesOnly, setTemplatesOnly] = useState(false);
   const [freeOnly, setFreeOnly] = useState(false);
   const [editingLicenseId, setEditingLicenseId] = useState(null);
   const [form, setForm] = useState(INITIAL_FORM);
@@ -271,6 +325,8 @@ function AdvancedLicenseManager({ language = "fr" }) {
             saving: "Enregistrement...",
             cancel: "Annuler",
             advanced: "Options avancees",
+            price: "Prix (EUR)",
+            pricePlaceholder: "Ex: 29,99",
             freeMode: "Mode gratuit",
             freeLabel: "Gratuit",
             paidLabel: "Payant",
@@ -296,6 +352,8 @@ function AdvancedLicenseManager({ language = "fr" }) {
             saving: "Saving...",
             cancel: "Cancel",
             advanced: "Advanced options",
+            price: "Price (EUR)",
+            pricePlaceholder: "Ex: 29.99",
             freeMode: "Free mode",
             freeLabel: "Free",
             paidLabel: "Paid",
@@ -419,9 +477,7 @@ function AdvancedLicenseManager({ language = "fr" }) {
       return;
     }
 
-    const authToken = localStorage.getItem("euks.auth.token") || "";
-
-    if (!authToken) {
+    if (!isLoggedIn()) {
       setSubmitState({
         isLoading: false,
         error: copy.tokenRequired,
@@ -445,9 +501,9 @@ function AdvancedLicenseManager({ language = "fr" }) {
       const payload = formToPayload(form);
 
       if (editingLicenseId) {
-        await updateLicense(editingLicenseId, payload, authToken);
+        await updateLicense(editingLicenseId, payload);
       } else {
-        await createLicense(payload, authToken);
+        await createLicense(payload);
       }
 
       await loadLicenses();
@@ -470,9 +526,7 @@ function AdvancedLicenseManager({ language = "fr" }) {
       return;
     }
 
-    const authToken = localStorage.getItem("euks.auth.token") || "";
-
-    if (!authToken) {
+    if (!isLoggedIn()) {
       setSubmitState({
         isLoading: false,
         error: copy.tokenRequired,
@@ -482,7 +536,7 @@ function AdvancedLicenseManager({ language = "fr" }) {
     }
 
     try {
-      await deleteLicense(license.id, authToken);
+      await deleteLicense(license.id);
       await loadLicenses();
     } catch (deleteError) {
       setSubmitState({
@@ -568,6 +622,9 @@ function AdvancedLicenseManager({ language = "fr" }) {
                         {license.isPaypalEnabled
                           ? copy.paidLabel
                           : copy.freeLabel}
+                      </span>
+                      <span className="rounded-full border border-cyan-300/25 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100">
+                        {formatPriceLabel(license.priceCents)}
                       </span>
                     </div>
                     <p className="mt-2 text-xs uppercase tracking-[0.16em] text-cyan-200">
@@ -655,6 +712,18 @@ function AdvancedLicenseManager({ language = "fr" }) {
               required
             />
           </label>
+          <label className="text-sm text-slate-300">
+            {copy.price}
+            <input
+              type="text"
+              inputMode="decimal"
+              value={form.priceEuro}
+              onChange={(event) => updateField("priceEuro", event.target.value)}
+              placeholder={copy.pricePlaceholder}
+              className="mt-2 w-full rounded-xl border border-white/12 bg-white/5 px-3 py-2 text-white outline-none"
+              required={form.isPaypalEnabled}
+            />
+          </label>
           <label className="text-sm text-slate-300 md:col-span-2">
             Description
             <textarea
@@ -692,7 +761,15 @@ function AdvancedLicenseManager({ language = "fr" }) {
                 isActive={!form.isPaypalEnabled}
                 label={!form.isPaypalEnabled ? copy.freeLabel : copy.paidLabel}
                 onClick={() =>
-                  updateField("isPaypalEnabled", !form.isPaypalEnabled)
+                  setForm((previous) => {
+                    const isPaypalEnabled = !previous.isPaypalEnabled;
+
+                    return {
+                      ...previous,
+                      isPaypalEnabled,
+                      priceEuro: isPaypalEnabled ? previous.priceEuro : "0",
+                    };
+                  })
                 }
               />
             </div>

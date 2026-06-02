@@ -11,6 +11,7 @@ export default class LicenseTransformer extends BaseTransformer<License> {
       isPaypalEnabled: this.resource.isPaypalEnabled,
       isActive: this.resource.isActive,
       sortOrder: this.resource.sortOrder,
+      priceCents: this.resource.priceCents,
 
       // === AUDIO ===
       audioFormats: this.resource.audioFormats,
@@ -20,6 +21,7 @@ export default class LicenseTransformer extends BaseTransformer<License> {
       maxStreams: this.resource.maxStreams,
       maxDownloads: this.resource.maxDownloads,
       maxSales: this.resource.maxSales,
+      radioStations: this.resource.radioStations,
 
       // === VIDEO ===
       allowVideoClips: this.resource.allowVideoClips,
@@ -102,7 +104,7 @@ export default class LicenseTransformer extends BaseTransformer<License> {
       updatedAt: this.resource.updatedAt,
 
       // === PIVOT DATA (when used as track license) ===
-      priceCents: this.when(this.hasPivotValue('pivot_price_cents'), () =>
+      trackPriceCents: this.when(this.hasPivotValue('pivot_price_cents'), () =>
         Number(this.resource.$extras.pivot_price_cents)
       ),
       isTrackActive: this.when(this.hasPivotValue('pivot_is_active'), () =>

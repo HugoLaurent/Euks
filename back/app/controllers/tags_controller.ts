@@ -50,7 +50,8 @@ export default class TagsController {
       type: payload.type,
     })
 
-    return response.status(201).send(serialize(TagTransformer.transform(tag)))
+    response.status(201)
+    return serialize(TagTransformer.transform(tag))
   }
 
   async update({ params, request, response, serialize }: HttpContext) {

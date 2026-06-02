@@ -284,6 +284,10 @@ function SoftAurora({
       programRef.current = null;
       gl.getExtension("WEBGL_lose_context")?.loseContext();
     };
+    // Init-once WebGL setup: the shader uniforms (color1, speed, …) are read at
+    // creation and kept up to date by the dedicated effect below, so they are
+    // intentionally excluded from this effect's dependencies.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enableMouseInteraction]);
 
   useEffect(() => {

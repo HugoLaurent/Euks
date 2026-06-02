@@ -67,6 +67,9 @@ export default class License extends BaseModel {
   @column({ columnName: 'sort_order' })
   declare sortOrder: number
 
+  @column({ columnName: 'price_cents' })
+  declare priceCents: number
+
   // === AUDIO FORMATS ===
   @column({
     prepare: prepareJsonArrayValue,
@@ -86,6 +89,9 @@ export default class License extends BaseModel {
 
   @column({ columnName: 'max_sales' })
   declare maxSales: number | null
+
+  @column({ columnName: 'radio_stations' })
+  declare radioStations: number | null
 
   // === VIDEO CONTENT ===
   @column({ columnName: 'allow_video_clips' })

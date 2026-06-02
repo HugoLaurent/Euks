@@ -50,7 +50,8 @@ export default class MusicalKeysController {
       slug,
     })
 
-    return response.status(201).send(serialize(MusicalKeyTransformer.transform(musicalKey)))
+    response.status(201)
+    return serialize(MusicalKeyTransformer.transform(musicalKey))
   }
 
   async update({ params, request, response, serialize }: HttpContext) {

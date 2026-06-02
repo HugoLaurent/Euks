@@ -202,10 +202,16 @@ function useReactiveAudioPlayer(track) {
     const nextSrc = track.audioSrc || defaultPreviewSrc;
     activeTrackRef.current = track;
 
+    // This effect synchronizes the <audio> element with the current track
+    // (pause/load/play below). The state below mirrors that element's position,
+    // so it is intentionally reset here alongside the imperative audio reset —
+    // splitting it into a render-time reset would risk audio/UI desync.
+    /* eslint-disable react-hooks/set-state-in-effect */
     setProgress(0);
     setCurrentTime("0:00");
     setDuration(track.duration);
     setEnergy(0.12);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     if (!audio) {
       return;
