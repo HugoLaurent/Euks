@@ -5,6 +5,7 @@
 
 export const controllers = {
   AccessToken: () => import('#controllers/access_token_controller'),
+  ClientDashboard: () => import('#controllers/client_dashboard_controller'),
   Dashboard: () => import('#controllers/dashboard_controller'),
   Licenses: () => import('#controllers/licenses_controller'),
   MusicalKeys: () => import('#controllers/musical_keys_controller'),

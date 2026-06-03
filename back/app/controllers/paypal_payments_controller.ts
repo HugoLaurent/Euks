@@ -11,6 +11,7 @@ import {
   isPayPalConfigured,
 } from '#services/paypal_service'
 import { resolveCheckoutLicense } from '#services/licensing_service'
+import { downloadAccessService } from '#services/download_access_service'
 import { capturePayPalOrderValidator, createPayPalOrderValidator } from '#validators/paypal'
 import type { HttpContext } from '@adonisjs/core/http'
 
@@ -172,7 +173,7 @@ export default class PaypalPaymentsController {
     }
   }
 
-  async captureOrder({ params, request, response }: HttpContext) {
+  async captureOrder({ params, request, response, auth }: HttpContext) {
     if (!isPayPalConfigured()) {
       return response.status(503).send({
         enabled: false,
@@ -220,7 +221,17 @@ export default class PaypalPaymentsController {
       const firstCapture = captureResponse.purchase_units?.[0]?.payments?.captures?.[0]
       const payerEmail = captureResponse.payer?.email_address ?? null
 
+      // Try to get authenticated user, or null for anonymous purchase
+      let userId: number | null = null
+      try {
+        const user = await auth.authenticate()
+        userId = user.id
+      } catch {
+        // User not authenticated, that's okay for anonymous purchases
+      }
+
       paymentOrder.merge({
+        userId: userId,
         status: this.toPaymentOrderStatus(
           captureResponse.status ?? firstCapture?.status,
           'COMPLETED'
@@ -232,6 +243,9 @@ export default class PaypalPaymentsController {
       })
 
       await paymentOrder.save()
+
+      // Create download accesses for this purchase
+      await downloadAccessService.createAccessesAfterPurchase(paymentOrder, userId)
 
       return {
         id: captureResponse.id,

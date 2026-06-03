@@ -7,10 +7,19 @@ export interface ApiDefinition {
       store: typeof routes['auth.access_token.store']
       destroy: typeof routes['auth.access_token.destroy']
     }
+    newAccount: {
+      store: typeof routes['auth.new_account.store']
+    }
   }
   profile: {
     profile: {
       show: typeof routes['profile.profile.show']
+      update: typeof routes['profile.profile.update']
+      delete: typeof routes['profile.profile.delete']
+    }
+    clientDashboard: {
+      purchases: typeof routes['profile.client_dashboard.purchases']
+      downloads: typeof routes['profile.client_dashboard.downloads']
     }
   }
   catalog: {
@@ -34,6 +43,9 @@ export interface ApiDefinition {
       config: typeof routes['catalog.paypal_payments.config']
       createOrder: typeof routes['catalog.paypal_payments.create_order']
       captureOrder: typeof routes['catalog.paypal_payments.capture_order']
+    }
+    clientDashboard: {
+      download: typeof routes['catalog.client_dashboard.download']
     }
     manage: {
       dashboard: {

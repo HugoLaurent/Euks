@@ -1,6 +1,9 @@
 export { default as LicenseManager } from "./LicenseManager.jsx";
 export { default as DashboardPage } from "./DashboardPage.jsx";
 export { default as LoginPage } from "./LoginPage.jsx";
+export { default as SignupPage } from "./SignupPage.jsx";
+export { default as ClientDashboardPage } from "./ClientDashboardPage.jsx";
+export { default as ProfilePage } from "./ProfilePage.jsx";
 export { default as PayPalSandboxCheckout } from "./PayPalSandboxCheckout.jsx";
 export { default as PlayerCard } from "./PlayerCard.jsx";
 export { default as PurchaseModal } from "./PurchaseModal.jsx";

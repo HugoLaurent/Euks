@@ -18,11 +18,41 @@ const routes = {
     tokens: [{"old":"/api/v1/auth/logout","type":0,"val":"api","end":""},{"old":"/api/v1/auth/logout","type":0,"val":"v1","end":""},{"old":"/api/v1/auth/logout","type":0,"val":"auth","end":""},{"old":"/api/v1/auth/logout","type":0,"val":"logout","end":""}],
     types: placeholder as Registry['auth.access_token.destroy']['types'],
   },
+  'auth.new_account.store': {
+    methods: ["POST"],
+    pattern: '/api/v1/auth/signup',
+    tokens: [{"old":"/api/v1/auth/signup","type":0,"val":"api","end":""},{"old":"/api/v1/auth/signup","type":0,"val":"v1","end":""},{"old":"/api/v1/auth/signup","type":0,"val":"auth","end":""},{"old":"/api/v1/auth/signup","type":0,"val":"signup","end":""}],
+    types: placeholder as Registry['auth.new_account.store']['types'],
+  },
   'profile.profile.show': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/account/profile',
     tokens: [{"old":"/api/v1/account/profile","type":0,"val":"api","end":""},{"old":"/api/v1/account/profile","type":0,"val":"v1","end":""},{"old":"/api/v1/account/profile","type":0,"val":"account","end":""},{"old":"/api/v1/account/profile","type":0,"val":"profile","end":""}],
     types: placeholder as Registry['profile.profile.show']['types'],
+  },
+  'profile.profile.update': {
+    methods: ["PUT"],
+    pattern: '/api/v1/account/profile',
+    tokens: [{"old":"/api/v1/account/profile","type":0,"val":"api","end":""},{"old":"/api/v1/account/profile","type":0,"val":"v1","end":""},{"old":"/api/v1/account/profile","type":0,"val":"account","end":""},{"old":"/api/v1/account/profile","type":0,"val":"profile","end":""}],
+    types: placeholder as Registry['profile.profile.update']['types'],
+  },
+  'profile.profile.delete': {
+    methods: ["DELETE"],
+    pattern: '/api/v1/account/profile',
+    tokens: [{"old":"/api/v1/account/profile","type":0,"val":"api","end":""},{"old":"/api/v1/account/profile","type":0,"val":"v1","end":""},{"old":"/api/v1/account/profile","type":0,"val":"account","end":""},{"old":"/api/v1/account/profile","type":0,"val":"profile","end":""}],
+    types: placeholder as Registry['profile.profile.delete']['types'],
+  },
+  'profile.client_dashboard.purchases': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/account/purchases',
+    tokens: [{"old":"/api/v1/account/purchases","type":0,"val":"api","end":""},{"old":"/api/v1/account/purchases","type":0,"val":"v1","end":""},{"old":"/api/v1/account/purchases","type":0,"val":"account","end":""},{"old":"/api/v1/account/purchases","type":0,"val":"purchases","end":""}],
+    types: placeholder as Registry['profile.client_dashboard.purchases']['types'],
+  },
+  'profile.client_dashboard.downloads': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/account/downloads',
+    tokens: [{"old":"/api/v1/account/downloads","type":0,"val":"api","end":""},{"old":"/api/v1/account/downloads","type":0,"val":"v1","end":""},{"old":"/api/v1/account/downloads","type":0,"val":"account","end":""},{"old":"/api/v1/account/downloads","type":0,"val":"downloads","end":""}],
+    types: placeholder as Registry['profile.client_dashboard.downloads']['types'],
   },
   'catalog.licenses.index': {
     methods: ["GET","HEAD"],
@@ -89,6 +119,12 @@ const routes = {
     pattern: '/api/v1/payments/paypal/orders/:orderId/capture',
     tokens: [{"old":"/api/v1/payments/paypal/orders/:orderId/capture","type":0,"val":"api","end":""},{"old":"/api/v1/payments/paypal/orders/:orderId/capture","type":0,"val":"v1","end":""},{"old":"/api/v1/payments/paypal/orders/:orderId/capture","type":0,"val":"payments","end":""},{"old":"/api/v1/payments/paypal/orders/:orderId/capture","type":0,"val":"paypal","end":""},{"old":"/api/v1/payments/paypal/orders/:orderId/capture","type":0,"val":"orders","end":""},{"old":"/api/v1/payments/paypal/orders/:orderId/capture","type":1,"val":"orderId","end":""},{"old":"/api/v1/payments/paypal/orders/:orderId/capture","type":0,"val":"capture","end":""}],
     types: placeholder as Registry['catalog.paypal_payments.capture_order']['types'],
+  },
+  'catalog.client_dashboard.download': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/downloads/:token',
+    tokens: [{"old":"/api/v1/downloads/:token","type":0,"val":"api","end":""},{"old":"/api/v1/downloads/:token","type":0,"val":"v1","end":""},{"old":"/api/v1/downloads/:token","type":0,"val":"downloads","end":""},{"old":"/api/v1/downloads/:token","type":1,"val":"token","end":""}],
+    types: placeholder as Registry['catalog.client_dashboard.download']['types'],
   },
   'catalog.manage.dashboard.summary': {
     methods: ["GET","HEAD"],

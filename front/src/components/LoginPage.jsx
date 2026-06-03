@@ -37,6 +37,8 @@ function LoginPage({ language = "fr" }) {
           hintTitle: "Comptes de dev",
           hintBody: "admin@euks.local / Admin12345!",
           defaultError: "Impossible de se connecter.",
+          signupLink: "Tu n'as pas encore de compte ?",
+          signupLinkText: "S'inscrire",
         },
         en: {
           title: "Sign in",
@@ -51,6 +53,8 @@ function LoginPage({ language = "fr" }) {
           hintTitle: "Dev account",
           hintBody: "admin@euks.local / Admin12345!",
           defaultError: "Unable to sign in.",
+          signupLink: "Don't have an account?",
+          signupLinkText: "Sign up",
         },
       })[language] || {
         title: "Connexion",
@@ -65,6 +69,8 @@ function LoginPage({ language = "fr" }) {
         hintTitle: "Comptes de dev",
         hintBody: "admin@euks.local / Admin12345!",
         defaultError: "Impossible de se connecter.",
+        signupLink: "Tu n'as pas encore de compte ?",
+        signupLinkText: "S'inscrire",
       },
     [language],
   );
@@ -190,6 +196,16 @@ function LoginPage({ language = "fr" }) {
           <p className="font-semibold text-slate-200">{copy.hintTitle}</p>
           <p className="mt-1">{copy.hintBody}</p>
         </div>
+
+        <p className="mt-6 text-center text-sm text-slate-400">
+          {copy.signupLink}
+          <a
+            href="/signup"
+            className="ml-1 text-cyan-300 transition hover:text-cyan-200"
+          >
+            {copy.signupLinkText}
+          </a>
+        </p>
       </section>
     </main>
   );

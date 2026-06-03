@@ -32,6 +32,33 @@ export class AuthAccessTokenSchema extends BaseModel {
   declare updatedAt: DateTime | null
 }
 
+export class DownloadAccessSchema extends BaseModel {
+  static $columns = ['accessToken', 'createdAt', 'downloadCount', 'expiresAt', 'fileType', 'id', 'licenseId', 'paymentOrderId', 'trackId', 'updatedAt', 'userId'] as const
+  $columns = DownloadAccessSchema.$columns
+  @column()
+  declare accessToken: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare downloadCount: number
+  @column.dateTime()
+  declare expiresAt: DateTime | null
+  @column()
+  declare fileType: string
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare licenseId: number
+  @column()
+  declare paymentOrderId: number
+  @column()
+  declare trackId: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare userId: number
+}
+
 export class LicenseSchema extends BaseModel {
   static $columns = ['additionalTerms', 'allowAdultContent', 'allowCommercialUse', 'allowContentId', 'allowEducationalUse', 'allowGamblingUse', 'allowLivePerformance', 'allowMechanicalRepro', 'allowMilitaryUse', 'allowMonetization', 'allowNonprofitUse', 'allowOfflineListening', 'allowPodcast', 'allowPoliticalUse', 'allowRadioAirplay', 'allowReligiousUse', 'allowRemix', 'allowRemixDistribution', 'allowSampling', 'allowStreaming', 'allowSublicense', 'allowTelevision', 'allowTrackModification', 'allowTransfer', 'allowVideoClips', 'allowedPlatforms', 'allowedTerritories', 'audioFormats', 'commercialUseDescription', 'commercialUseLimit', 'createdAt', 'creditRequirements', 'description', 'durationMonths', 'id', 'isActive', 'isExclusive', 'isPaypalEnabled', 'isTemplate', 'licenseEndDate', 'licenseStartDate', 'masterSplitPercentage', 'maxConcurrentStreams', 'maxDownloads', 'maxSales', 'maxStreams', 'minAudioBitrate', 'modificationRestrictions', 'priceCents', 'publishingSplitPercentage', 'radioStations', 'requireApprovalForModification', 'requireArtistCredit', 'requireDrmEncryption', 'requireMasterCredit', 'requirePublishingCredit', 'requiresWrittenAgreement', 'restrictedGenres', 'restrictedUseCases', 'revisionDate', 'revisionNotes', 'sortOrder', 'templateCategory', 'thirdPartySplitPercentage', 'title', 'trackSeparation', 'transferRestrictions', 'updatedAt', 'userId', 'videoClipsLimit'] as const
   $columns = LicenseSchema.$columns
@@ -193,7 +220,7 @@ export class MusicalKeySchema extends BaseModel {
 }
 
 export class PaymentOrderSchema extends BaseModel {
-  static $columns = ['amountCents', 'capturePayload', 'createdAt', 'currencyCode', 'errorPayload', 'id', 'licenseId', 'licenseIdSnapshot', 'licenseTitleSnapshot', 'orderPayload', 'payerEmail', 'paypalCaptureId', 'paypalOrderId', 'provider', 'requestPayload', 'status', 'trackId', 'trackTitleSnapshot', 'updatedAt'] as const
+  static $columns = ['amountCents', 'capturePayload', 'createdAt', 'currencyCode', 'errorPayload', 'id', 'licenseId', 'licenseIdSnapshot', 'licenseTitleSnapshot', 'orderPayload', 'payerEmail', 'paypalCaptureId', 'paypalOrderId', 'provider', 'requestPayload', 'status', 'trackId', 'trackTitleSnapshot', 'updatedAt', 'userId'] as const
   $columns = PaymentOrderSchema.$columns
   @column()
   declare amountCents: number
@@ -233,6 +260,8 @@ export class PaymentOrderSchema extends BaseModel {
   declare trackTitleSnapshot: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
+  @column()
+  declare userId: number | null
 }
 
 export class TagSchema extends BaseModel {

@@ -13,6 +13,7 @@ import fs from 'node:fs/promises'
 import { join } from 'node:path'
 
 const AccessTokenController = () => import('#controllers/access_token_controller')
+const ClientDashboardController = () => import('#controllers/client_dashboard_controller')
 const DashboardController = () => import('#controllers/dashboard_controller')
 const LicensesController = () => import('#controllers/licenses_controller')
 const MusicalKeysController = () => import('#controllers/musical_keys_controller')
@@ -21,6 +22,7 @@ const ProfileController = () => import('#controllers/profile_controller')
 const TagsController = () => import('#controllers/tags_controller')
 const TrackLicensesController = () => import('#controllers/track_licenses_controller')
 const TracksController = () => import('#controllers/tracks_controller')
+const NewAccountController = () => import('#controllers/new_account_controller')
 
 router.get('/', () => {
   return { hello: 'world' }
@@ -32,6 +34,7 @@ router
       .group(() => {
         router.post('login', [AccessTokenController, 'store'])
         router.post('logout', [AccessTokenController, 'destroy']).use(middleware.auth())
+        router.post('signup', [NewAccountController, 'store'])
       })
       .prefix('auth')
       .as('auth')
@@ -39,6 +42,10 @@ router
     router
       .group(() => {
         router.get('/profile', [ProfileController, 'show'])
+        router.put('/profile', [ProfileController, 'update'])
+        router.delete('/profile', [ProfileController, 'delete'])
+        router.get('purchases', [ClientDashboardController, 'purchases'])
+        router.get('downloads', [ClientDashboardController, 'downloads'])
       })
       .prefix('account')
       .as('profile')
@@ -60,6 +67,7 @@ router
           PaypalPaymentsController,
           'captureOrder',
         ])
+        router.get('downloads/:token', [ClientDashboardController, 'download'])
       })
       .as('catalog')
 

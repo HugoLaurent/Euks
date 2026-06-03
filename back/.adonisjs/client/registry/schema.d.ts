@@ -31,6 +31,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/access_token_controller').default['destroy']>>>
     }
   }
+  'auth.new_account.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/auth/signup'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/user').signupValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/user').signupValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/new_account_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/new_account_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
   'profile.profile.show': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/account/profile'
@@ -41,6 +53,54 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['show']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['show']>>>
+    }
+  }
+  'profile.profile.update': {
+    methods: ["PUT"]
+    pattern: '/api/v1/account/profile'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/profile').updateProfileValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/profile').updateProfileValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'profile.profile.delete': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/account/profile'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['delete']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['delete']>>>
+    }
+  }
+  'profile.client_dashboard.purchases': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/account/purchases'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/client_dashboard_controller').default['purchases']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/client_dashboard_controller').default['purchases']>>>
+    }
+  }
+  'profile.client_dashboard.downloads': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/account/downloads'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/client_dashboard_controller').default['downloads']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/client_dashboard_controller').default['downloads']>>>
     }
   }
   'catalog.licenses.index': {
@@ -173,6 +233,18 @@ export interface Registry {
       query: ExtractQuery<InferInput<(typeof import('#validators/paypal').capturePayPalOrderValidator)>>
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/paypal_payments_controller').default['captureOrder']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/paypal_payments_controller').default['captureOrder']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'catalog.client_dashboard.download': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/downloads/:token'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { token: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/client_dashboard_controller').default['download']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/client_dashboard_controller').default['download']>>>
     }
   }
   'catalog.manage.dashboard.summary': {

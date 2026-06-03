@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import bgDesktop from "@/assets/bg/background_desktop.webp";
 import bgMobile from "@/assets/bg/bg_mobile.webp";
 import bgTags from "@/assets/bg/bg_tags.jpg";
 import {
   DashboardPage,
   LoginPage,
+  SignupPage,
+  ClientDashboardPage,
+  ProfilePage,
   PlayerCard,
   PurchaseModal,
   SelectionPanel,
@@ -20,9 +24,6 @@ import {
   fetchCatalog,
   getStoredAuthUser,
 } from "@/lib";
-
-const LOGIN_URL = import.meta.env.VITE_LOGIN_URL || "/login";
-const DASHBOARD_URL = import.meta.env.VITE_DASHBOARD_URL || "/dashboard";
 
 const EMPTY_PLAYER_TRACK = {
   id: 0,
@@ -107,7 +108,9 @@ function readAudioMetadataDuration(audioSrc) {
 }
 
 function App() {
+  const navigate = useNavigate();
   const [authUser, setAuthUser] = useState(() => getStoredAuthUser());
+  const isAuthenticated = Boolean(authUser);
   const [isLogoutLoading, setIsLogoutLoading] = useState(false);
   const [language, setLanguage] = useState("fr");
   const [isMobilePlayerOpen, setIsMobilePlayerOpen] = useState(false);
@@ -124,9 +127,6 @@ function App() {
   });
   const [catalogTracksRaw, setCatalogTracksRaw] = useState([]);
   const [audioDurationsByTrackId, setAudioDurationsByTrackId] = useState({});
-  const isLoginPage = window.location.pathname === "/login";
-  const isDashboardPage = window.location.pathname === "/dashboard";
-  const isAuthenticated = Boolean(authUser);
   const catalogTracks = useMemo(
     () =>
       adaptCatalogTracks(catalogTracksRaw, language, audioDurationsByTrackId),
@@ -195,37 +195,30 @@ function App() {
     setIsLoginModalOpen(true);
   }, [isAuthenticated]);
 
-  // Redirect unauthenticated visitors away from the dashboard. Navigating in an
-  // effect (rather than during render) keeps the render pure.
-  useEffect(() => {
-    if (isDashboardPage && !isAuthenticated) {
-      const loginUrl = new URL(LOGIN_URL, window.location.origin);
-      loginUrl.searchParams.set("redirect", "/dashboard");
-      window.location.href = loginUrl.href;
-    }
-  }, [isDashboardPage, isAuthenticated]);
-
   const handleLoginModalClose = useCallback(() => {
     setIsLoginModalOpen(false);
   }, []);
 
   const handleLoginRedirect = useCallback(() => {
     setIsLoginModalOpen(false);
-
-    const loginUrl = new URL(LOGIN_URL, window.location.origin);
-    const redirectPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-
-    if (redirectPath && redirectPath !== "/login") {
-      loginUrl.searchParams.set("redirect", redirectPath);
-    }
-
-    window.location.href = loginUrl.href;
-  }, []);
+    navigate("/login");
+  }, [navigate]);
 
   const handleDashboardRedirect = useCallback(() => {
-    const dashboardUrl = new URL(DASHBOARD_URL, window.location.origin);
-    window.location.href = dashboardUrl.href;
-  }, []);
+    navigate("/dashboard");
+  }, [navigate]);
+
+  const handleClientDashboardRedirect = useCallback(() => {
+    navigate("/client-dashboard");
+  }, [navigate]);
+
+  const handleSignupRedirect = useCallback(() => {
+    navigate("/signup");
+  }, [navigate]);
+
+  const handleProfileRedirect = useCallback(() => {
+    navigate("/profile");
+  }, [navigate]);
 
   const handleLogout = useCallback(async () => {
     if (!isAuthenticated || isLogoutLoading) {
@@ -418,6 +411,9 @@ function App() {
               "Tu vas être redirigé vers la page de connexion.",
             loginModalCancel: "Annuler",
             loginModalConfirm: "Continuer",
+            signup: "S'inscrire",
+            myAccount: "Mon Espace",
+            profile: "Mon Profil",
             dashboard: "Dashboard",
             logout: "Se déconnecter",
             logoutLoading: "Déconnexion...",
@@ -470,6 +466,9 @@ function App() {
             loginModalDescription: "You will be redirected to the login page.",
             loginModalCancel: "Cancel",
             loginModalConfirm: "Continue",
+            signup: "Sign up",
+            myAccount: "My Account",
+            profile: "My Profile",
             dashboard: "Dashboard",
             logout: "Sign out",
             logoutLoading: "Signing out...",
@@ -478,19 +477,6 @@ function App() {
       })[language],
     [catalogError, language],
   );
-
-  if (isLoginPage) {
-    return <LoginPage language={language} />;
-  }
-
-  if (isDashboardPage) {
-    if (!isAuthenticated) {
-      // Redirect is handled by the effect above; render nothing meanwhile.
-      return null;
-    }
-
-    return <DashboardPage language={language} onLogout={handleLogout} />;
-  }
 
   return (
     <main className="relative flex min-h-screen flex-col overflow-x-hidden bg-slate-950  text-white">
@@ -543,6 +529,20 @@ function App() {
               </button>
               <button
                 type="button"
+                onClick={handleClientDashboardRedirect}
+                className="rounded-full border border-blue-300/35 bg-blue-400/18 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-400/28"
+              >
+                {copy.footer.myAccount}
+              </button>
+              <button
+                type="button"
+                onClick={handleProfileRedirect}
+                className="rounded-full border border-purple-300/35 bg-purple-400/18 px-4 py-2 text-sm font-semibold text-purple-100 transition hover:bg-purple-400/28"
+              >
+                {copy.footer.profile}
+              </button>
+              <button
+                type="button"
                 onClick={handleLogout}
                 disabled={isLogoutLoading}
                 className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
@@ -553,13 +553,22 @@ function App() {
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              onClick={handleLoginModalOpen}
-              className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/20"
-            >
-              {copy.footer.loginModalTitle}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={handleSignupRedirect}
+                className="rounded-full border border-cyan-300/35 bg-cyan-400/18 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/28"
+              >
+                {copy.footer.signup}
+              </button>
+              <button
+                type="button"
+                onClick={handleLoginModalOpen}
+                className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/20"
+              >
+                {copy.footer.loginModalTitle}
+              </button>
+            </>
           )}
           <h1 className="font-['Archivo'] text-5xl md:text-6xl">
             {copy.heroTitle}
@@ -580,6 +589,20 @@ function App() {
               </button>
               <button
                 type="button"
+                onClick={handleClientDashboardRedirect}
+                className="rounded-full border border-blue-300/35 bg-blue-400/18 px-3 py-1.5 text-xs font-semibold text-blue-100 transition hover:bg-blue-400/28"
+              >
+                {copy.footer.myAccount}
+              </button>
+              <button
+                type="button"
+                onClick={handleProfileRedirect}
+                className="rounded-full border border-purple-300/35 bg-purple-400/18 px-3 py-1.5 text-xs font-semibold text-purple-100 transition hover:bg-purple-400/28"
+              >
+                {copy.footer.profile}
+              </button>
+              <button
+                type="button"
                 onClick={handleLogout}
                 disabled={isLogoutLoading}
                 className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
@@ -590,13 +613,22 @@ function App() {
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              onClick={handleLoginModalOpen}
-              className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:bg-white/20"
-            >
-              {copy.footer.loginModalTitle}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={handleSignupRedirect}
+                className="rounded-full border border-cyan-300/35 bg-cyan-400/18 px-3 py-1.5 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/28"
+              >
+                {copy.footer.signup}
+              </button>
+              <button
+                type="button"
+                onClick={handleLoginModalOpen}
+                className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:bg-white/20"
+              >
+                {copy.footer.loginModalTitle}
+              </button>
+            </>
           )}
           <h1 className="font-['Archivo'] text-5xl md:text-6xl">
             {copy.heroTitle}

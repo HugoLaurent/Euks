@@ -1,8 +1,10 @@
 import { DateTime } from 'luxon'
-import { BaseModel, belongsTo, column } from '@adonisjs/lucid/orm'
-import type { BelongsTo } from '@adonisjs/lucid/types/relations'
+import { BaseModel, belongsTo, column, hasMany } from '@adonisjs/lucid/orm'
+import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import License from '#models/license'
 import Track from '#models/track'
+import User from '#models/user'
+import DownloadAccess from '#models/download_access'
 
 export type PaymentProvider = 'paypal'
 export type PaymentOrderStatus =
@@ -16,6 +18,9 @@ export type PaymentOrderStatus =
 export default class PaymentOrder extends BaseModel {
   @column({ isPrimary: true })
   declare id: number
+
+  @column()
+  declare userId: number | null
 
   @column()
   declare provider: PaymentProvider
@@ -70,6 +75,12 @@ export default class PaymentOrder extends BaseModel {
 
   @belongsTo(() => License)
   declare license: BelongsTo<typeof License>
+
+  @belongsTo(() => User)
+  declare user: BelongsTo<typeof User>
+
+  @hasMany(() => DownloadAccess)
+  declare downloadAccesses: HasMany<typeof DownloadAccess>
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
