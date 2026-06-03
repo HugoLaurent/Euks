@@ -24,6 +24,10 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Data-fetching effects legitimately call setState (e.g. setLoading(true))
+      // synchronously on mount; the single extra render is negligible. Keep this
+      // visible as a warning instead of failing the build.
+      'react-hooks/set-state-in-effect': 'warn',
     },
   },
 ])

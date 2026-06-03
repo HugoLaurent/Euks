@@ -77,6 +77,36 @@ function LoginPage() {
     [language],
   );
 
+  async function loginWith(quickEmail, quickPassword) {
+    if (isLoading) return;
+    setEmail(quickEmail);
+    setPassword(quickPassword);
+    setIsLoading(true);
+    setErrorMessage("");
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: quickEmail, password: quickPassword }),
+      });
+      const payload = await parseResponsePayload(response);
+      const authData = payload?.data ?? payload;
+      if (!response.ok || !authData?.token) {
+        throw new Error(payload?.message || authData?.message || copy.defaultError);
+      }
+      if (authData.user) {
+        localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(authData.user));
+      }
+      const params = new URLSearchParams(window.location.search);
+      window.location.href = params.get("redirect") || "/";
+    } catch (error) {
+      setErrorMessage(error?.message || copy.defaultError);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
 
@@ -203,6 +233,33 @@ function LoginPage() {
             {copy.signupLinkText}
           </a>
         </p>
+
+        {/* Dev quick-login — visible en développement uniquement */}
+        {import.meta.env.DEV ? (
+          <div className="mt-6 space-y-2 border-t border-white/8 pt-5">
+            <p className="text-center text-[10px] uppercase tracking-[0.22em] text-slate-500">
+              Accès rapide dev
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={() => loginWith("a@a.com", "jeleveux")}
+                className="flex-1 rounded-full border border-white/12 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/10 disabled:opacity-50"
+              >
+                👤 Client
+              </button>
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={() => loginWith("owner@euks.local", "Owner12345!")}
+                className="flex-1 rounded-full border border-cyan-300/25 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-400/18 disabled:opacity-50"
+              >
+                🎛️ Vendeur
+              </button>
+            </div>
+          </div>
+        ) : null}
       </section>
     </main>
   );

@@ -2,8 +2,6 @@ import app from '@adonisjs/core/services/app'
 import type { HttpContext } from '@adonisjs/core/http'
 import PaymentOrder from '#models/payment_order'
 import DownloadAccess from '#models/download_access'
-import Track from '#models/track'
-import { DateTime } from 'luxon'
 
 export default class ClientDashboardController {
   /**
@@ -69,9 +67,7 @@ export default class ClientDashboardController {
       return this.validationError(response, 'perPage', 'Per page must be a positive integer')
     }
 
-    const query = DownloadAccess.query()
-      .where('user_id', user.id)
-      .orderBy('created_at', 'desc')
+    const query = DownloadAccess.query().where('user_id', user.id).orderBy('created_at', 'desc')
 
     const accesses = await query
       .preload('track')
@@ -105,9 +101,15 @@ export default class ClientDashboardController {
   /**
    * Download a file using access token
    */
-  async download({ params, response }: HttpContext) {
+  async download({ auth, params, response }: HttpContext) {
+    const user = await auth.authenticate()
+
+    // Scope the lookup to the authenticated user so a valid token only ever
+    // grants access to the file the user actually purchased (no IDOR, and you
+    // can never pull a file type — e.g. stems — you did not buy).
     const access = await DownloadAccess.query()
       .where('accessToken', params.token)
+      .where('user_id', user.id)
       .preload('track')
       .first()
 
@@ -167,15 +169,17 @@ export default class ClientDashboardController {
 
     await DownloadAccess.query().where('id', access.id).increment('downloadCount', 1)
 
-    return response.download(absoluteFilePath, fileName)
+    // `attachment` sets Content-Disposition with the human-readable file name.
+    // (`download`'s 2nd arg is `generateEtag: boolean`, not a file name.)
+    return response.attachment(absoluteFilePath, fileName)
   }
 
   /**
    * Parse and validate positive integer from request
    */
   private parsePositiveInteger(value: any, defaultValue: number): number | null {
-    const parsed = parseInt(value ?? defaultValue, 10)
-    if (isNaN(parsed) || parsed < 1) {
+    const parsed = Number.parseInt(value ?? defaultValue, 10)
+    if (Number.isNaN(parsed) || parsed < 1) {
       return null
     }
     return parsed

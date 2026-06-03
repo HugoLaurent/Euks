@@ -62,12 +62,18 @@ router
         router.get('tracks', [TracksController, 'index'])
         router.get('tracks/:id', [TracksController, 'show'])
         router.get('payments/paypal/config', [PaypalPaymentsController, 'config'])
-        router.post('payments/paypal/orders', [PaypalPaymentsController, 'createOrder']).use(middleware.auth())
-        router.post('payments/paypal/orders/:orderId/capture', [
-          PaypalPaymentsController,
-          'captureOrder',
-        ]).use(middleware.auth())
-        router.get('downloads/:token', [ClientDashboardController, 'download']).use(middleware.auth())
+        router
+          .post('payments/paypal/orders', [PaypalPaymentsController, 'createOrder'])
+          .use(middleware.auth())
+        router
+          .post('payments/paypal/orders/:orderId/capture', [
+            PaypalPaymentsController,
+            'captureOrder',
+          ])
+          .use(middleware.auth())
+        router
+          .get('downloads/:token', [ClientDashboardController, 'download'])
+          .use(middleware.auth())
       })
       .as('catalog')
 

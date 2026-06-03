@@ -501,7 +501,9 @@ export default class TracksController {
 
       // Public files use an absolute-looking web path; storage files use a relative storage path.
       return {
-        path: options.useStorage ? `${options.folder}/${fileName}` : `/${options.folder}/${fileName}`,
+        path: options.useStorage
+          ? `${options.folder}/${fileName}`
+          : `/${options.folder}/${fileName}`,
       }
     }
 

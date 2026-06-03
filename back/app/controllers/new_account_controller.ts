@@ -66,14 +66,14 @@ export default class NewAccountController {
         token: tokenValue,
       })
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create account'
       return response.unprocessableEntity({
         errors: [
           {
-            message: error.message || 'Failed to create account',
+            message,
           },
         ],
       })
     }
   }
 }
-

@@ -238,7 +238,13 @@ function DashboardPage() {
   const [storedUser, setStoredUser] = useState(() => readStoredUser());
   const isAdmin = storedUser?.role === "admin" || storedUser?.role === "owner";
 
-  const [activeSection, setActiveSection] = useState(() => isAdmin ? "overview" : "myDownloads");
+  const [activeSection, setActiveSection] = useState(() => {
+    // Land on the downloads tab right after a successful purchase (?purchased=1).
+    if (new URLSearchParams(window.location.search).get("purchased") === "1") {
+      return "myDownloads";
+    }
+    return isAdmin ? "overview" : "myDownloads";
+  });
   const [editingTrack, setEditingTrack] = useState(null);
 
   // Tracks

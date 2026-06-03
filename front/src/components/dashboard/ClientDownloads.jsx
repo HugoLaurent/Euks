@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Download } from "lucide-react";
+import { CheckCircle2, Download, X } from "lucide-react";
 import { API_BASE_URL } from "@/lib";
 
 const FILE_TYPE_LABELS = {
@@ -39,8 +39,8 @@ function renderPagination(meta, page, setPage) {
 
 function ClientDownloads({ language }) {
   const copy = language === "fr"
-    ? { title: "Mes téléchargements", empty: "Aucun téléchargement disponible.", loading: "Chargement...", error: "Erreur.", license: "Licence", downloadCount: "Téléchargements", expiresAt: "Expire le", download: "Télécharger", expired: "Expiré" }
-    : { title: "My Downloads", empty: "No downloads available.", loading: "Loading...", error: "Error.", license: "License", downloadCount: "Downloads", expiresAt: "Expires on", download: "Download", expired: "Expired" };
+    ? { title: "Mes téléchargements", empty: "Aucun téléchargement disponible.", loading: "Chargement...", error: "Erreur.", license: "Licence", downloadCount: "Téléchargements", expiresAt: "Expire le", download: "Télécharger", expired: "Expiré", thanksTitle: "Merci pour ton achat ! 🎉", thanksBody: "Ton paiement a bien été validé. Tes fichiers sont disponibles ci-dessous — clique sur « Télécharger ». Les liens restent valables 12 mois.", dismiss: "Fermer" }
+    : { title: "My Downloads", empty: "No downloads available.", loading: "Loading...", error: "Error.", license: "License", downloadCount: "Downloads", expiresAt: "Expires on", download: "Download", expired: "Expired", thanksTitle: "Thank you for your purchase! 🎉", thanksBody: "Your payment went through. Your files are available below — just click “Download”. Links stay valid for 12 months.", dismiss: "Dismiss" };
 
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState({ currentPage: 1, lastPage: 1 });
@@ -48,6 +48,17 @@ function ClientDownloads({ language }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [dlError, setDlError] = useState("");
+  const [showThanks, setShowThanks] = useState(
+    () => new URLSearchParams(window.location.search).get("purchased") === "1",
+  );
+
+  // Drop the ?purchased flag from the URL so a refresh doesn't re-show the banner.
+  useEffect(() => {
+    if (!showThanks) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("purchased");
+    window.history.replaceState({}, "", url);
+  }, [showThanks]);
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -84,6 +95,23 @@ function ClientDownloads({ language }) {
   return (
     <section className="space-y-4">
       <h2 className="text-2xl font-black text-white">{copy.title}</h2>
+      {showThanks ? (
+        <div className="relative flex items-start gap-3 rounded-2xl border border-emerald-300/30 bg-emerald-400/10 p-4 text-sm text-emerald-50">
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" />
+          <div className="min-w-0 pr-6">
+            <p className="font-semibold">{copy.thanksTitle}</p>
+            <p className="mt-1 leading-6 text-emerald-50/90">{copy.thanksBody}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowThanks(false)}
+            aria-label={copy.dismiss}
+            className="absolute right-3 top-3 rounded-full p-1 text-emerald-100/80 transition hover:bg-white/10 hover:text-white"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
       {dlError ? <p className="rounded-2xl border border-rose-300/25 bg-rose-500/10 p-3 text-sm text-rose-100">{dlError}</p> : null}
       {error ? <p className="rounded-2xl border border-rose-300/25 bg-rose-500/10 p-3 text-sm text-rose-100">{error}</p> : null}
       {loading ? <p className="text-sm text-slate-400">{copy.loading}</p> : null}

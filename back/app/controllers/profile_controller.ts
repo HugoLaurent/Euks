@@ -42,7 +42,12 @@ export default class ProfileController {
       if (data.newPassword) {
         if (!data.currentPassword) {
           return response.unprocessableEntity({
-            errors: [{ field: 'currentPassword', message: 'Current password is required to set new password' }],
+            errors: [
+              {
+                field: 'currentPassword',
+                message: 'Current password is required to set new password',
+              },
+            ],
           })
         }
 

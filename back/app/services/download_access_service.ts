@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import DownloadAccess from '#models/download_access'
 import License from '#models/license'
-import PaymentOrder from '#models/payment_order'
+import type PaymentOrder from '#models/payment_order'
 import { DateTime } from 'luxon'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 

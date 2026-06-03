@@ -43,7 +43,11 @@ export default class DashboardController {
       this.countTracks({ isActive: true }),
       this.countTracks({ isActive: false }),
       this.countTracks({ isSold: true }),
-      PaymentOrder.query().preload('track').preload('license').orderBy('created_at', 'desc').limit(5),
+      PaymentOrder.query()
+        .preload('track')
+        .preload('license')
+        .orderBy('created_at', 'desc')
+        .limit(5),
     ])
 
     return {

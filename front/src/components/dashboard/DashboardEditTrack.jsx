@@ -17,7 +17,7 @@ function isAcceptedFileForZone(zone, file) {
   return false;
 }
 
-function FileReplaceInput({ label, accept, zone, uploadFile, uploadError, onFileAssign, dropHint, selected, invalidType }) {
+function FileReplaceInput({ label, accept, zone, uploadFile, uploadError, onFileAssign, dropHint, selected }) {
   const [isActive, setIsActive] = useState(false);
 
   return (
@@ -69,9 +69,10 @@ function DashboardEditTrack({
   const [uploadErrors, setUploadErrors] = useState({ cover: "", mp3: "", wav: "", stemsZip: "" });
   const [submitState, setSubmitState] = useState({ isLoading: false, error: "", success: "" });
 
-  // Load track licenses from dedicated endpoint when component mounts
-  const [loadedLicenseIds, setLoadedLicenseIds] = useState(null);
+  // Load the track's attached licenses from the dedicated endpoint on mount and
+  // apply them directly (no intermediate state copied via a second effect).
   useEffect(() => {
+    let cancelled = false;
     async function loadTrackLicenses() {
       try {
         const res = await fetch(`${API_BASE_URL}/tracks/${track.id}/licenses`, {
@@ -80,19 +81,14 @@ function DashboardEditTrack({
         });
         const payload = await res.json();
         const licenses = Array.isArray(payload?.licenses) ? payload.licenses : (Array.isArray(payload) ? payload : []);
-        setLoadedLicenseIds(licenses.map((l) => l.id));
+        if (!cancelled) setSelectedLicenseIds(licenses.map((l) => l.id));
       } catch {
-        // keep initial
+        // keep the initial selection on failure
       }
     }
     loadTrackLicenses();
+    return () => { cancelled = true; };
   }, [track.id]);
-
-  useEffect(() => {
-    if (loadedLicenseIds !== null) {
-      setSelectedLicenseIds(loadedLicenseIds);
-    }
-  }, [loadedLicenseIds]);
 
   function handleFileAssign(zone, file) {
     if (!isAcceptedFileForZone(zone, file)) {
@@ -283,16 +279,16 @@ function DashboardEditTrack({
         </p>
         <FileReplaceInput zone="cover" label={copy.addTrack.fields.cover} accept="image/*"
           uploadFile={uploadFiles.cover} uploadError={uploadErrors.cover} onFileAssign={handleFileAssign}
-          dropHint={copy.addTrack.dropHint} selected={copy.addTrack.selected} invalidType={copy.addTrack.invalidType} />
+          dropHint={copy.addTrack.dropHint} selected={copy.addTrack.selected} />
         <FileReplaceInput zone="mp3" label={copy.addTrack.fields.mp3} accept=".mp3,audio/mpeg"
           uploadFile={uploadFiles.mp3} uploadError={uploadErrors.mp3} onFileAssign={handleFileAssign}
-          dropHint={copy.addTrack.dropHint} selected={copy.addTrack.selected} invalidType={copy.addTrack.invalidType} />
+          dropHint={copy.addTrack.dropHint} selected={copy.addTrack.selected} />
         <FileReplaceInput zone="wav" label={copy.addTrack.fields.wav} accept=".wav,audio/wav"
           uploadFile={uploadFiles.wav} uploadError={uploadErrors.wav} onFileAssign={handleFileAssign}
-          dropHint={copy.addTrack.dropHint} selected={copy.addTrack.selected} invalidType={copy.addTrack.invalidType} />
+          dropHint={copy.addTrack.dropHint} selected={copy.addTrack.selected} />
         <FileReplaceInput zone="stemsZip" label={copy.addTrack.fields.stemsZip} accept=".zip,application/zip"
           uploadFile={uploadFiles.stemsZip} uploadError={uploadErrors.stemsZip} onFileAssign={handleFileAssign}
-          dropHint={copy.addTrack.dropHint} selected={copy.addTrack.selected} invalidType={copy.addTrack.invalidType} />
+          dropHint={copy.addTrack.dropHint} selected={copy.addTrack.selected} />
 
         <div className="md:col-span-2 flex items-center justify-between gap-3 pt-2">
           <div className="text-xs">

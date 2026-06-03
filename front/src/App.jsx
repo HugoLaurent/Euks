@@ -1,14 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Pause, Play } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import bgDesktop from "@/assets/bg/background_desktop.webp";
 import bgMobile from "@/assets/bg/bg_mobile.webp";
 import bgTags from "@/assets/bg/bg_tags.jpg";
 import {
-  DashboardPage,
-  LoginPage,
-  SignupPage,
-  ClientDashboardPage,
-  ProfilePage,
   PlayerCard,
   PurchaseModal,
   SelectionPanel,
@@ -255,16 +251,11 @@ function App() {
   );
 
   const handlePurchaseSuccess = useCallback(() => {
-    // Re-fetch catalog so sold tracks update in real time
-    setCatalogStatus("loading");
-    fetchCatalog()
-      .then((catalog) => {
-        setCatalogTags(catalog.tagsByType);
-        setCatalogTracksRaw(catalog.tracks);
-        setCatalogStatus("ready");
-      })
-      .catch(() => setCatalogStatus("ready"));
-  }, []);
+    // After a successful checkout, take the buyer straight to their downloads
+    // with a thank-you banner instead of leaving them on the store. The catalog
+    // (sold state included) reloads fresh the next time the store mounts.
+    navigate("/dashboard?purchased=1");
+  }, [navigate]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -531,117 +522,125 @@ function App() {
         <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-b from-transparent via-slate-950/50 to-slate-950" />
       </div>
 
-      <header className="relative z-20 hidden px-6 pt-6 md:block">
-        <div className="mx-auto flex w-full max-w-[1380px] items-center justify-end gap-3">
-          {isAuthenticated ? (
-            <>
-              {isAdmin ? (
+      {/* ── Navbar unique desktop + mobile ── */}
+      <header className="relative z-20 px-4 pt-4 md:px-6 md:pt-6">
+        <div className="mx-auto flex w-full max-w-[1380px] items-center gap-3">
+
+          {/* Player compact — gauche */}
+          <div className="flex flex-1 items-center gap-3 overflow-hidden">
+            {selectedTrack ? (
+              <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 backdrop-blur">
+                {/* Cover */}
+                {selectedTrack.coverImage ? (
+                  <img
+                    src={selectedTrack.coverImage}
+                    alt=""
+                    className="h-8 w-8 shrink-0 rounded-lg object-cover"
+                  />
+                ) : (
+                  <div className={`h-8 w-8 shrink-0 rounded-lg bg-linear-to-br ${selectedTrack.cover}`} />
+                )}
+
+                {/* Titre + artiste */}
+                <div className="hidden min-w-0 sm:block">
+                  <p className="truncate text-sm font-semibold leading-tight text-white" style={{ maxWidth: "14rem" }}>
+                    {selectedTrack.title}
+                  </p>
+                  <p className="truncate text-[11px] leading-tight text-slate-400">
+                    {selectedTrack.artist} · {selectedTrack.bpm} BPM
+                  </p>
+                </div>
+
+                {/* Play / Pause */}
                 <button
                   type="button"
-                  onClick={handleDashboardRedirect}
-                  className="rounded-full border border-cyan-300/35 bg-cyan-400/18 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/28"
+                  onClick={togglePlayback}
+                  aria-label={isPlaying ? copy.player.pause : copy.player.play}
+                  className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-cyan-300/35 bg-cyan-400/18 text-cyan-100 transition hover:bg-cyan-400/28"
                 >
-                  {copy.footer.dashboard}
+                  {isPlaying
+                    ? <Pause className="h-3.5 w-3.5" />
+                    : <Play className="ml-0.5 h-3.5 w-3.5" />}
                 </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={handleClientDashboardRedirect}
-                className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/20"
-              >
-                {copy.footer.myAccount}
-              </button>
-              <button
-                type="button"
-                onClick={handleLogout}
-                disabled={isLogoutLoading}
-                className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isLogoutLoading
-                  ? copy.footer.logoutLoading
-                  : copy.footer.logout}
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={handleSignupRedirect}
-                className="rounded-full border border-cyan-300/35 bg-cyan-400/18 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/28"
-              >
-                {copy.footer.signup}
-              </button>
-              <button
-                type="button"
-                onClick={handleLoginModalOpen}
-                className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/20"
-              >
-                {copy.footer.loginModalTitle}
-              </button>
-            </>
-          )}
-          <h1 className="font-['Archivo'] text-5xl md:text-6xl">
-            {copy.heroTitle}
-          </h1>
+
+                {/* Barre de progression */}
+                <div className="hidden w-28 md:block lg:w-40">
+                  <input
+                    type="range"
+                    min={0}
+                    max={1000}
+                    value={Math.round(Math.min(Math.max(progress, 0), 1) * 1000)}
+                    onChange={(e) => seekToProgress(Number(e.target.value) / 1000)}
+                    aria-label={copy.player.seek}
+                    className="player-progress-slider w-full"
+                    style={{ "--player-progress": `${Math.min(Math.max(progress, 0), 1) * 100}%` }}
+                  />
+                </div>
+
+                {/* Durée */}
+                <span className="hidden shrink-0 text-[11px] tabular-nums text-slate-400 lg:block">
+                  {currentTime} / {duration}
+                </span>
+              </div>
+            ) : (
+              /* Logo quand rien ne joue */
+              <h1 className="font-['Archivo'] text-4xl text-white md:text-5xl">
+                {copy.heroTitle}
+              </h1>
+            )}
+          </div>
+
+          {/* Logo centré quand le player est visible (desktop) */}
+          {selectedTrack ? (
+            <h1 className="hidden shrink-0 font-['Archivo'] text-4xl text-white md:block md:text-5xl lg:text-6xl">
+              {copy.heroTitle}
+            </h1>
+          ) : null}
+
+          {/* Nav — droite */}
+          <div className="flex shrink-0 items-center gap-2">
+            {isAuthenticated ? (
+              <>
+                <button
+                  type="button"
+                  onClick={isAdmin ? handleDashboardRedirect : handleClientDashboardRedirect}
+                  className="rounded-full border border-cyan-300/35 bg-cyan-400/18 px-3 py-1.5 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/28 md:px-4 md:py-2 md:text-sm"
+                >
+                  {isAdmin ? copy.footer.dashboard : copy.footer.myAccount}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={isLogoutLoading}
+                  className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:bg-white/20 disabled:opacity-60 md:px-4 md:py-2 md:text-sm"
+                >
+                  {isLogoutLoading ? copy.footer.logoutLoading : copy.footer.logout}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleSignupRedirect}
+                  className="rounded-full border border-cyan-300/35 bg-cyan-400/18 px-3 py-1.5 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/28 md:px-4 md:py-2 md:text-sm"
+                >
+                  {copy.footer.signup}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLoginModalOpen}
+                  className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:bg-white/20 md:px-4 md:py-2 md:text-sm"
+                >
+                  {copy.footer.loginModalTitle}
+                </button>
+              </>
+            )}
+          </div>
+
         </div>
       </header>
 
-      <header className="relative z-10 px-4 pt-6 md:hidden">
-        <div className="mx-auto flex w-full max-w-[1380px] items-center justify-end gap-3">
-          {isAuthenticated ? (
-            <>
-              {isAdmin ? (
-                <button
-                  type="button"
-                  onClick={handleDashboardRedirect}
-                  className="rounded-full border border-cyan-300/35 bg-cyan-400/18 px-3 py-1.5 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/28"
-                >
-                  {copy.footer.dashboard}
-                </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={handleClientDashboardRedirect}
-                className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:bg-white/20"
-              >
-                {copy.footer.myAccount}
-              </button>
-              <button
-                type="button"
-                onClick={handleLogout}
-                disabled={isLogoutLoading}
-                className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isLogoutLoading
-                  ? copy.footer.logoutLoading
-                  : copy.footer.logout}
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={handleSignupRedirect}
-                className="rounded-full border border-cyan-300/35 bg-cyan-400/18 px-3 py-1.5 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/28"
-              >
-                {copy.footer.signup}
-              </button>
-              <button
-                type="button"
-                onClick={handleLoginModalOpen}
-                className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:bg-white/20"
-              >
-                {copy.footer.loginModalTitle}
-              </button>
-            </>
-          )}
-          <h1 className="font-['Archivo'] text-5xl md:text-6xl">
-            {copy.heroTitle}
-          </h1>
-        </div>
-      </header>
-
-      <div className="flex flex-1 items-start justify-end px-4 pt-6 md:px-6 md:items-center md:pt-24">
+      <div className="flex flex-1 items-start justify-end px-4 pt-4 md:px-6 md:items-center md:pt-8">
         <div className="flex w-full max-w-[1380px] flex-col gap-6">
           <section
             className="relative overflow-hidden rounded-3xl border border-white/10 shadow-2xl p-4 md:p-6 xl:p-8"
@@ -682,22 +681,6 @@ function App() {
             </div>
           </section>
 
-          {selectedTrack ? (
-            <div className="hidden xl:block">
-              <PlayerCard
-                currentTime={currentTime}
-                duration={duration}
-                energy={energy}
-                isPlaying={isPlaying}
-                labels={copy.player}
-                onPurchase={handlePurchaseOpen}
-                onSeek={seekToProgress}
-                onTogglePlayback={togglePlayback}
-                track={selectedTrack}
-                progress={progress}
-              />
-            </div>
-          ) : null}
         </div>
       </div>
 

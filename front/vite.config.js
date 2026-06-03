@@ -11,7 +11,10 @@ export default defineConfig({
     },
   },
   server: {
-    allowedHosts: ["localhost", "31ac-195-200-175-226.ngrok-free.app"],
+    allowedHosts: [
+      "localhost",
+      "55a6-2a01-e0a-e9b-e610-6005-d25d-744e-77b3.ngrok-free.app",
+    ],
     proxy: {
       "/api/v1": {
         target: "http://localhost:3333",
@@ -22,10 +25,6 @@ export default defineConfig({
         changeOrigin: true,
       },
       "/covers": {
-        target: "http://localhost:3333",
-        changeOrigin: true,
-      },
-      "/archives": {
         target: "http://localhost:3333",
         changeOrigin: true,
       },

@@ -23,4 +23,3 @@ export const signupValidator = vine.create({
   confirmPassword: vine.string(),
   fullName: vine.string().minLength(2).maxLength(255),
 })
-

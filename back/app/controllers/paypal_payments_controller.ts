@@ -217,7 +217,12 @@ export default class PaypalPaymentsController {
       }
 
       if (paymentOrder.userId !== null && paymentOrder.userId !== user.id) {
-        return this.errorResponse(response, 403, 'This order does not belong to you', 'ORDER_FORBIDDEN')
+        return this.errorResponse(
+          response,
+          403,
+          'This order does not belong to you',
+          'ORDER_FORBIDDEN'
+        )
       }
 
       if (paymentOrder.paypalCaptureId || paymentOrder.status === 'COMPLETED') {

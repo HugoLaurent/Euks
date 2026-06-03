@@ -13,13 +13,16 @@ tmp/*
 # Frontend assets compiled code
 public/assets
 
-# Uploaded/generated media
+# Uploaded/generated media (public previews + covers)
 public/audio/*
 !public/audio/.gitkeep
-public/archives/*
-!public/archives/.gitkeep
 public/covers/*
 !public/covers/.gitkeep
+
+# Private paid deliverables (WAV + stems ZIP).
+# Stored outside public/ and served only through the authenticated download route.
+storage/*
+!storage/.gitkeep
 
 # Build tools specific
 npm-debug.log

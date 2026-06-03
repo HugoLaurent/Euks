@@ -60,7 +60,7 @@ function ClientProfile({ language }) {
     });
     if (!ok) { setInfoState({ saving: false, error: data?.errors?.[0]?.message || data?.message || t.error, success: "" }); return; }
     const updated = data?.user ?? { ...profile, ...updates };
-    try { const s = JSON.parse(localStorage.getItem(AUTH_USER_STORAGE_KEY) || "{}"); localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify({ ...s, ...updated })); } catch {}
+    try { const s = JSON.parse(localStorage.getItem(AUTH_USER_STORAGE_KEY) || "{}"); localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify({ ...s, ...updated })); } catch { /* ignore storage errors */ }
     setProfile((p) => ({ ...p, ...updated }));
     setInfoState({ saving: false, error: "", success: t.profileUpdated });
   }

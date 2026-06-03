@@ -50,17 +50,44 @@ test.group('Auth login', (group) => {
     })
   })
 
-  test('rejects any user outside the two managed accounts', async ({ client }) => {
+  test('allows a registered client to login', async ({ client, assert }) => {
     await User.create({
-      fullName: 'Intrus',
-      email: 'intrus@euks.local',
-      password: 'Intrus123!',
-      role: 'owner',
+      fullName: 'Client',
+      email: 'client@euks.local',
+      password: 'Client123!',
+      role: 'client',
     })
 
     const response = await client.post('/api/v1/auth/login').json({
-      email: 'intrus@euks.local',
-      password: 'Intrus123!',
+      email: 'client@euks.local',
+      password: 'Client123!',
+    })
+
+    response.assertOk()
+    response.assertBodyContains({
+      data: {
+        user: {
+          email: 'client@euks.local',
+          role: 'client',
+        },
+      },
+    })
+
+    const body = response.body()
+    assert.isString(body.data.token)
+  })
+
+  test('rejects invalid credentials', async ({ client }) => {
+    await User.create({
+      fullName: 'Client',
+      email: 'client@euks.local',
+      password: 'Client123!',
+      role: 'client',
+    })
+
+    const response = await client.post('/api/v1/auth/login').json({
+      email: 'client@euks.local',
+      password: 'WrongPassword!',
     })
 
     response.assertBadRequest()
@@ -73,12 +100,27 @@ test.group('Auth login', (group) => {
     })
   })
 
-  test('does not expose a public signup endpoint anymore', async ({ client }) => {
+  test('exposes a public signup endpoint that creates a client account', async ({
+    client,
+    assert,
+  }) => {
     const response = await client.post('/api/v1/auth/signup').json({
       email: 'someone@euks.local',
       password: 'Secret123!',
+      confirmPassword: 'Secret123!',
+      fullName: 'New Client',
     })
 
-    response.assertNotFound()
+    response.assertCreated()
+    response.assertBodyContains({
+      user: {
+        email: 'someone@euks.local',
+        role: 'client',
+      },
+    })
+
+    const body = response.body()
+    assert.isString(body.token)
+    assert.isAbove(body.token.length, 0)
   })
 })

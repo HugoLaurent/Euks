@@ -8,7 +8,18 @@ import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 
 export class AuthAccessTokenSchema extends BaseModel {
-  static $columns = ['abilities', 'createdAt', 'expiresAt', 'hash', 'id', 'lastUsedAt', 'name', 'tokenableId', 'type', 'updatedAt'] as const
+  static $columns = [
+    'abilities',
+    'createdAt',
+    'expiresAt',
+    'hash',
+    'id',
+    'lastUsedAt',
+    'name',
+    'tokenableId',
+    'type',
+    'updatedAt',
+  ] as const
   $columns = AuthAccessTokenSchema.$columns
   @column()
   declare abilities: string
@@ -33,7 +44,19 @@ export class AuthAccessTokenSchema extends BaseModel {
 }
 
 export class DownloadAccessSchema extends BaseModel {
-  static $columns = ['accessToken', 'createdAt', 'downloadCount', 'expiresAt', 'fileType', 'id', 'licenseId', 'paymentOrderId', 'trackId', 'updatedAt', 'userId'] as const
+  static $columns = [
+    'accessToken',
+    'createdAt',
+    'downloadCount',
+    'expiresAt',
+    'fileType',
+    'id',
+    'licenseId',
+    'paymentOrderId',
+    'trackId',
+    'updatedAt',
+    'userId',
+  ] as const
   $columns = DownloadAccessSchema.$columns
   @column()
   declare accessToken: string | null
@@ -60,7 +83,34 @@ export class DownloadAccessSchema extends BaseModel {
 }
 
 export class LicenseSchema extends BaseModel {
-  static $columns = ['additionalTerms', 'allowContentId', 'allowLivePerformance', 'allowMonetization', 'allowRadioAirplay', 'allowRemix', 'allowTelevision', 'allowVideoClips', 'audioFormats', 'createdAt', 'description', 'id', 'isActive', 'isPaypalEnabled', 'isTemplate', 'maxSales', 'maxStreams', 'priceCents', 'radioStations', 'sortOrder', 'templateCategory', 'title', 'trackSeparation', 'updatedAt', 'userId', 'videoClipsLimit'] as const
+  static $columns = [
+    'additionalTerms',
+    'allowContentId',
+    'allowLivePerformance',
+    'allowMonetization',
+    'allowRadioAirplay',
+    'allowRemix',
+    'allowTelevision',
+    'allowVideoClips',
+    'audioFormats',
+    'createdAt',
+    'description',
+    'id',
+    'isActive',
+    'isPaypalEnabled',
+    'isTemplate',
+    'maxSales',
+    'maxStreams',
+    'priceCents',
+    'radioStations',
+    'sortOrder',
+    'templateCategory',
+    'title',
+    'trackSeparation',
+    'updatedAt',
+    'userId',
+    'videoClipsLimit',
+  ] as const
   $columns = LicenseSchema.$columns
   @column()
   declare additionalTerms: string | null
@@ -132,7 +182,28 @@ export class MusicalKeySchema extends BaseModel {
 }
 
 export class PaymentOrderSchema extends BaseModel {
-  static $columns = ['amountCents', 'capturePayload', 'createdAt', 'currencyCode', 'errorPayload', 'id', 'licenseId', 'licenseIdSnapshot', 'licenseTitleSnapshot', 'orderPayload', 'payerEmail', 'paypalCaptureId', 'paypalOrderId', 'provider', 'requestPayload', 'status', 'trackId', 'trackTitleSnapshot', 'updatedAt', 'userId'] as const
+  static $columns = [
+    'amountCents',
+    'capturePayload',
+    'createdAt',
+    'currencyCode',
+    'errorPayload',
+    'id',
+    'licenseId',
+    'licenseIdSnapshot',
+    'licenseTitleSnapshot',
+    'orderPayload',
+    'payerEmail',
+    'paypalCaptureId',
+    'paypalOrderId',
+    'provider',
+    'requestPayload',
+    'status',
+    'trackId',
+    'trackTitleSnapshot',
+    'updatedAt',
+    'userId',
+  ] as const
   $columns = PaymentOrderSchema.$columns
   @column()
   declare amountCents: number
@@ -194,7 +265,14 @@ export class TagSchema extends BaseModel {
 }
 
 export class TrackLicenseSchema extends BaseModel {
-  static $columns = ['createdAt', 'isActive', 'licenseId', 'priceCents', 'trackId', 'updatedAt'] as const
+  static $columns = [
+    'createdAt',
+    'isActive',
+    'licenseId',
+    'priceCents',
+    'trackId',
+    'updatedAt',
+  ] as const
   $columns = TrackLicenseSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -224,7 +302,24 @@ export class TrackTagSchema extends BaseModel {
 }
 
 export class TrackSchema extends BaseModel {
-  static $columns = ['audioFilePath', 'bpm', 'coverImagePath', 'createdAt', 'durationSeconds', 'id', 'isActive', 'isSold', 'listenCount', 'musicalKeyId', 'priceCents', 'soldAt', 'title', 'updatedAt', 'waveFilePath', 'zipFilePath'] as const
+  static $columns = [
+    'audioFilePath',
+    'bpm',
+    'coverImagePath',
+    'createdAt',
+    'durationSeconds',
+    'id',
+    'isActive',
+    'isSold',
+    'listenCount',
+    'musicalKeyId',
+    'priceCents',
+    'soldAt',
+    'title',
+    'updatedAt',
+    'waveFilePath',
+    'zipFilePath',
+  ] as const
   $columns = TrackSchema.$columns
   @column()
   declare audioFilePath: string | null
@@ -261,7 +356,15 @@ export class TrackSchema extends BaseModel {
 }
 
 export class UserSchema extends BaseModel {
-  static $columns = ['createdAt', 'email', 'fullName', 'id', 'password', 'role', 'updatedAt'] as const
+  static $columns = [
+    'createdAt',
+    'email',
+    'fullName',
+    'id',
+    'password',
+    'role',
+    'updatedAt',
+  ] as const
   $columns = UserSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime

@@ -1,4 +1,3 @@
-import { errors as authErrors } from '@adonisjs/auth'
 import app from '@adonisjs/core/services/app'
 import User from '#models/user'
 import { AUTH_COOKIE_NAME } from '#middleware/cookie_token_middleware'

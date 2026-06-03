@@ -67,14 +67,17 @@ async function syncSystemUsersInternal() {
   }
 
   const { default: User } = await import('#models/user')
-  const hash = (await import('@adonisjs/core/services/hash')).default
+  const hashModule = await import('@adonisjs/core/services/hash')
+  const hash = hashModule.default
 
   for (const systemUser of getSystemUsers()) {
     const user = await User.findBy('email', systemUser.email)
 
     if (user) {
       // Only set password if it actually changed to avoid unnecessary re-hashing on every restart.
-      const isSamePassword = await hash.verify(user.password, systemUser.password).catch(() => false)
+      const isSamePassword = await hash
+        .verify(user.password, systemUser.password)
+        .catch(() => false)
 
       user.merge({
         fullName: systemUser.fullName,
