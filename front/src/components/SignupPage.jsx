@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { API_BASE_URL, AUTH_USER_STORAGE_KEY } from "@/lib";
+import { passwordChecks, isPasswordValid } from "@/lib/password";
 import { useAppContext } from "@/AppContext";
 
 async function parseResponsePayload(response) {
@@ -39,7 +40,7 @@ function SignupPage() {
           emailLabel: "Adresse email",
           emailPlaceholder: "ton.email@example.com",
           passwordLabel: "Mot de passe",
-          passwordPlaceholder: "Au moins 8 caractères",
+          passwordPlaceholder: "Au moins 12 caractères",
           confirmPasswordLabel: "Confirmer le mot de passe",
           confirmPasswordPlaceholder: "Confirme ton mot de passe",
           submit: "S'inscrire",
@@ -48,7 +49,12 @@ function SignupPage() {
           loginLink: "Tu as déjà un compte? Connecte-toi",
           defaultError: "Impossible de s'inscrire.",
           passwordMismatch: "Les mots de passe ne correspondent pas.",
-          passwordTooShort: "Le mot de passe doit faire au moins 8 caractères.",
+          passwordTooShort: "Le mot de passe ne respecte pas les critères.",
+          reqLength: "Au moins 12 caractères",
+          reqLower: "Une minuscule",
+          reqUpper: "Une majuscule",
+          reqDigit: "Un chiffre",
+          reqSpecial: "Un caractère spécial",
         },
         en: {
           title: "Sign up",
@@ -58,7 +64,7 @@ function SignupPage() {
           emailLabel: "Email",
           emailPlaceholder: "your.email@example.com",
           passwordLabel: "Password",
-          passwordPlaceholder: "At least 8 characters",
+          passwordPlaceholder: "At least 12 characters",
           confirmPasswordLabel: "Confirm password",
           confirmPasswordPlaceholder: "Confirm your password",
           submit: "Sign up",
@@ -67,7 +73,12 @@ function SignupPage() {
           loginLink: "Already have an account? Sign in",
           defaultError: "Unable to sign up.",
           passwordMismatch: "Passwords do not match.",
-          passwordTooShort: "Password must be at least 8 characters.",
+          passwordTooShort: "Password does not meet the requirements.",
+          reqLength: "At least 12 characters",
+          reqLower: "One lowercase letter",
+          reqUpper: "One uppercase letter",
+          reqDigit: "One digit",
+          reqSpecial: "One special character",
         },
       })[language] || {
         title: "Inscription",
@@ -106,7 +117,7 @@ function SignupPage() {
 
     if (!formData.password) {
       newErrors.password = "Password is required";
-    } else if (formData.password.length < 8) {
+    } else if (!isPasswordValid(formData.password)) {
       newErrors.password = copy.passwordTooShort;
     }
 
@@ -265,6 +276,24 @@ function SignupPage() {
             {errors.password && (
               <p className="mt-1 text-xs text-rose-300">{errors.password}</p>
             )}
+            {formData.password ? (
+              <ul className="mt-2 space-y-1 text-xs">
+                {[
+                  { key: "length", label: copy.reqLength },
+                  { key: "lower", label: copy.reqLower },
+                  { key: "upper", label: copy.reqUpper },
+                  { key: "digit", label: copy.reqDigit },
+                  { key: "special", label: copy.reqSpecial },
+                ].map((req) => {
+                  const ok = passwordChecks(formData.password)[req.key];
+                  return (
+                    <li key={req.key} className={ok ? "text-emerald-300" : "text-slate-400"}>
+                      {ok ? "✓" : "○"} {req.label}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
           </div>
 
           <div>

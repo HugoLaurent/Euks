@@ -106,8 +106,8 @@ test.group('Auth login', (group) => {
   }) => {
     const response = await client.post('/api/v1/auth/signup').json({
       email: 'someone@euks.local',
-      password: 'Secret123!',
-      confirmPassword: 'Secret123!',
+      password: 'StrongPass123!',
+      confirmPassword: 'StrongPass123!',
       fullName: 'New Client',
     })
 

@@ -10,6 +10,7 @@ export const controllers = {
   Licenses: () => import('#controllers/licenses_controller'),
   MusicalKeys: () => import('#controllers/musical_keys_controller'),
   NewAccount: () => import('#controllers/new_account_controller'),
+  PasswordReset: () => import('#controllers/password_reset_controller'),
   PaypalPayments: () => import('#controllers/paypal_payments_controller'),
   Profile: () => import('#controllers/profile_controller'),
   Tags: () => import('#controllers/tags_controller'),

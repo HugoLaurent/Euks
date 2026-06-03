@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { API_BASE_URL, AUTH_USER_STORAGE_KEY } from "@/lib";
+import { isPasswordValid } from "@/lib/password";
 
 const inputCls = "w-full rounded-xl border border-white/12 bg-white/5 px-3 py-2 text-sm text-white outline-none transition focus:border-cyan-300/45";
 
@@ -20,8 +21,8 @@ async function apiJson(url, options = {}) {
 
 function ClientProfile({ language }) {
   const t = language === "fr"
-    ? { title: "Mon profil", personalInfo: "Informations", fullName: "Nom complet", email: "Email", createdAt: "Membre depuis", changePassword: "Changer le mot de passe", currentPassword: "Mot de passe actuel", newPassword: "Nouveau mot de passe", confirmPassword: "Confirmer", dangerZone: "Zone dangereuse", deleteWarning: "Cette action est irréversible.", deleteConfirmPrompt: "Saisis ton mot de passe pour confirmer.", deleteButton: "Supprimer définitivement", deleteAccount: "Supprimer le compte", save: "Enregistrer", cancel: "Annuler", saving: "Enregistrement...", deleting: "Suppression...", profileUpdated: "Profil mis à jour.", passwordUpdated: "Mot de passe mis à jour.", passwordMismatch: "Les mots de passe ne correspondent pas.", loading: "Chargement...", error: "Erreur." }
-    : { title: "My profile", personalInfo: "Information", fullName: "Full name", email: "Email", createdAt: "Member since", changePassword: "Change password", currentPassword: "Current password", newPassword: "New password", confirmPassword: "Confirm", dangerZone: "Danger zone", deleteWarning: "This action is irreversible.", deleteConfirmPrompt: "Enter your password to confirm.", deleteButton: "Delete permanently", deleteAccount: "Delete account", save: "Save", cancel: "Cancel", saving: "Saving...", deleting: "Deleting...", profileUpdated: "Profile updated.", passwordUpdated: "Password updated.", passwordMismatch: "Passwords do not match.", loading: "Loading...", error: "Error." };
+    ? { title: "Mon profil", personalInfo: "Informations", fullName: "Nom complet", email: "Email", createdAt: "Membre depuis", changePassword: "Changer le mot de passe", currentPassword: "Mot de passe actuel", newPassword: "Nouveau mot de passe", confirmPassword: "Confirmer", dangerZone: "Zone dangereuse", deleteWarning: "Cette action est irréversible.", deleteConfirmPrompt: "Saisis ton mot de passe pour confirmer.", deleteButton: "Supprimer définitivement", deleteAccount: "Supprimer le compte", save: "Enregistrer", cancel: "Annuler", saving: "Enregistrement...", deleting: "Suppression...", profileUpdated: "Profil mis à jour.", passwordUpdated: "Mot de passe mis à jour.", passwordMismatch: "Les mots de passe ne correspondent pas.", weakPassword: "Min. 12 caractères, avec majuscule, minuscule, chiffre et caractère spécial.", loading: "Chargement...", error: "Erreur." }
+    : { title: "My profile", personalInfo: "Information", fullName: "Full name", email: "Email", createdAt: "Member since", changePassword: "Change password", currentPassword: "Current password", newPassword: "New password", confirmPassword: "Confirm", dangerZone: "Danger zone", deleteWarning: "This action is irreversible.", deleteConfirmPrompt: "Enter your password to confirm.", deleteButton: "Delete permanently", deleteAccount: "Delete account", save: "Save", cancel: "Cancel", saving: "Saving...", deleting: "Deleting...", profileUpdated: "Profile updated.", passwordUpdated: "Password updated.", passwordMismatch: "Passwords do not match.", weakPassword: "Min. 12 chars, with uppercase, lowercase, digit and special character.", loading: "Loading...", error: "Error." };
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -68,6 +69,7 @@ function ClientProfile({ language }) {
   async function handlePasswordUpdate(e) {
     e.preventDefault();
     if (pwState.saving) return;
+    if (!isPasswordValid(newPw)) { setPwState({ saving: false, error: t.weakPassword, success: "" }); return; }
     if (newPw !== confirmPw) { setPwState({ saving: false, error: t.passwordMismatch, success: "" }); return; }
     setPwState({ saving: true, error: "", success: "" });
     const { ok, data } = await apiJson(`${API_BASE_URL}/account/profile`, {
@@ -123,7 +125,7 @@ function ClientProfile({ language }) {
           </div>
           <div>
             <label className="block text-sm text-slate-300">{t.newPassword}</label>
-            <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} className={`mt-2 ${inputCls}`} autoComplete="new-password" minLength={8} required />
+            <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} className={`mt-2 ${inputCls}`} autoComplete="new-password" minLength={12} required />
           </div>
           <div>
             <label className="block text-sm text-slate-300">{t.confirmPassword}</label>

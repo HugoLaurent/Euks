@@ -23,6 +23,7 @@ const TagsController = () => import('#controllers/tags_controller')
 const TrackLicensesController = () => import('#controllers/track_licenses_controller')
 const TracksController = () => import('#controllers/tracks_controller')
 const NewAccountController = () => import('#controllers/new_account_controller')
+const PasswordResetController = () => import('#controllers/password_reset_controller')
 
 router
   .group(() => {
@@ -31,6 +32,8 @@ router
         router.post('login', [AccessTokenController, 'store'])
         router.post('logout', [AccessTokenController, 'destroy']).use(middleware.auth())
         router.post('signup', [NewAccountController, 'store'])
+        router.post('forgot-password', [PasswordResetController, 'forgot'])
+        router.post('reset-password', [PasswordResetController, 'reset'])
       })
       .prefix('auth')
       .as('auth')

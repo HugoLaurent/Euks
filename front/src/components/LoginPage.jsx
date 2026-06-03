@@ -41,6 +41,7 @@ function LoginPage() {
           defaultError: "Impossible de se connecter.",
           signupLink: "Tu n'as pas encore de compte ?",
           signupLinkText: "S'inscrire",
+          forgotPassword: "Mot de passe oublié ?",
         },
         en: {
           title: "Sign in",
@@ -57,6 +58,7 @@ function LoginPage() {
           defaultError: "Unable to sign in.",
           signupLink: "Don't have an account?",
           signupLinkText: "Sign up",
+          forgotPassword: "Forgot password?",
         },
       })[language] || {
         title: "Connexion",
@@ -73,6 +75,7 @@ function LoginPage() {
         defaultError: "Impossible de se connecter.",
         signupLink: "Tu n'as pas encore de compte ?",
         signupLinkText: "S'inscrire",
+        forgotPassword: "Mot de passe oublié ?",
       },
     [language],
   );
@@ -207,6 +210,14 @@ function LoginPage() {
               className="mt-2 w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300/45 focus:bg-white/10"
               required
             />
+            <div className="mt-2 text-right">
+              <a
+                href="/forgot-password"
+                className="text-xs text-slate-400 transition hover:text-cyan-200"
+              >
+                {copy.forgotPassword}
+              </a>
+            </div>
           </div>
 
           {errorMessage ? (
@@ -252,7 +263,7 @@ function LoginPage() {
               <button
                 type="button"
                 disabled={isLoading}
-                onClick={() => loginWith("owner@euks.local", "Owner12345!")}
+                onClick={() => loginWith("euks@euks.fr", "Enculer123!!!")}
                 className="flex-1 rounded-full border border-cyan-300/25 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-400/18 disabled:opacity-50"
               >
                 🎛️ Vendeur

@@ -10,6 +10,10 @@ export interface ApiDefinition {
     newAccount: {
       store: typeof routes['auth.new_account.store']
     }
+    passwordReset: {
+      forgot: typeof routes['auth.password_reset.forgot']
+      reset: typeof routes['auth.password_reset.reset']
+    }
   }
   profile: {
     profile: {

@@ -2,7 +2,13 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { useAppContext } from './AppContext'
 import App from './App'
-import { LoginPage, SignupPage, DashboardPage } from './components'
+import {
+  LoginPage,
+  SignupPage,
+  DashboardPage,
+  ForgotPasswordPage,
+  ResetPasswordPage,
+} from './components'
 
 function ProtectedRoute({ children }) {
   const { authUser } = useAppContext()
@@ -27,6 +33,14 @@ export const router = createBrowserRouter([
   {
     path: '/signup',
     element: <SignupPage />,
+  },
+  {
+    path: '/forgot-password',
+    element: <ForgotPasswordPage />,
+  },
+  {
+    path: '/reset-password',
+    element: <ResetPasswordPage />,
   },
   {
     path: '/dashboard',

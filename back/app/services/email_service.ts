@@ -112,3 +112,64 @@ export async function sendPurchaseConfirmation(opts: {
     html,
   })
 }
+
+export async function sendPasswordReset(opts: { to: string; token: string }) {
+  const resetUrl = `${APP_URL}/reset-password?token=${encodeURIComponent(opts.token)}`
+
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Réinitialisation du mot de passe — EUKS</title>
+</head>
+<body style="margin:0;padding:0;background:#020617;font-family:'Helvetica Neue',Arial,sans-serif;color:#f1f5f9;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#020617;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:520px;background:#0f172a;border-radius:24px;border:1px solid rgba(255,255,255,0.08);overflow:hidden;">
+          <tr>
+            <td style="padding:32px 32px 24px;border-bottom:1px solid rgba(255,255,255,0.06);">
+              <p style="margin:0;font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:#67e8f9;">EUKS Store</p>
+              <h1 style="margin:8px 0 0;font-size:24px;font-weight:900;color:#ffffff;">Réinitialise ton mot de passe</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 32px;">
+              <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#cbd5e1;">
+                Tu as demandé à réinitialiser ton mot de passe. Clique sur le bouton ci-dessous pour en choisir un nouveau. Ce lien est valable <strong style="color:#e2e8f0;">1 heure</strong>.
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <a href="${resetUrl}"
+                       style="display:inline-block;padding:14px 32px;background:rgba(103,232,249,0.15);border:1px solid rgba(103,232,249,0.3);border-radius:9999px;font-size:14px;font-weight:700;color:#67e8f9;text-decoration:none;">
+                      Réinitialiser mon mot de passe
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:24px 0 0;font-size:12px;color:#475569;text-align:center;line-height:1.6;">
+                Si tu n'es pas à l'origine de cette demande, ignore simplement cet email — ton mot de passe reste inchangé.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 32px;border-top:1px solid rgba(255,255,255,0.06);text-align:center;">
+              <p style="margin:0;font-size:11px;color:#334155;">EUKS Store</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+
+  await resend.emails.send({
+    from: FROM,
+    to: opts.to,
+    subject: '🔐 Réinitialisation de ton mot de passe EUKS',
+    html,
+  })
+}

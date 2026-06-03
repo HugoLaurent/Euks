@@ -7,6 +7,8 @@ export type ScannedRoutes = {
     'auth.access_token.store': { paramsTuple?: []; params?: {} }
     'auth.access_token.destroy': { paramsTuple?: []; params?: {} }
     'auth.new_account.store': { paramsTuple?: []; params?: {} }
+    'auth.password_reset.forgot': { paramsTuple?: []; params?: {} }
+    'auth.password_reset.reset': { paramsTuple?: []; params?: {} }
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'profile.profile.update': { paramsTuple?: []; params?: {} }
     'profile.profile.delete': { paramsTuple?: []; params?: {} }
@@ -46,6 +48,8 @@ export type ScannedRoutes = {
     'auth.access_token.store': { paramsTuple?: []; params?: {} }
     'auth.access_token.destroy': { paramsTuple?: []; params?: {} }
     'auth.new_account.store': { paramsTuple?: []; params?: {} }
+    'auth.password_reset.forgot': { paramsTuple?: []; params?: {} }
+    'auth.password_reset.reset': { paramsTuple?: []; params?: {} }
     'catalog.paypal_payments.create_order': { paramsTuple?: []; params?: {} }
     'catalog.paypal_payments.capture_order': { paramsTuple: [ParamValue]; params: {'orderId': ParamValue} }
     'catalog.manage.licenses.store': { paramsTuple?: []; params?: {} }
