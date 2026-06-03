@@ -24,10 +24,6 @@ const TrackLicensesController = () => import('#controllers/track_licenses_contro
 const TracksController = () => import('#controllers/tracks_controller')
 const NewAccountController = () => import('#controllers/new_account_controller')
 
-router.get('/', () => {
-  return { hello: 'world' }
-})
-
 router
   .group(() => {
     router

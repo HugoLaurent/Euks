@@ -42,6 +42,17 @@ export type ScannedRoutes = {
     'catalog.manage.track_licenses.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'catalog.manage.track_licenses.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
+  POST: {
+    'auth.access_token.store': { paramsTuple?: []; params?: {} }
+    'auth.access_token.destroy': { paramsTuple?: []; params?: {} }
+    'auth.new_account.store': { paramsTuple?: []; params?: {} }
+    'catalog.paypal_payments.create_order': { paramsTuple?: []; params?: {} }
+    'catalog.paypal_payments.capture_order': { paramsTuple: [ParamValue]; params: {'orderId': ParamValue} }
+    'catalog.manage.licenses.store': { paramsTuple?: []; params?: {} }
+    'catalog.manage.tags.store': { paramsTuple?: []; params?: {} }
+    'catalog.manage.musical_keys.store': { paramsTuple?: []; params?: {} }
+    'catalog.manage.tracks.store': { paramsTuple?: []; params?: {} }
+  }
   GET: {
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'profile.client_dashboard.purchases': { paramsTuple?: []; params?: {} }
@@ -79,17 +90,6 @@ export type ScannedRoutes = {
     'catalog.manage.dashboard.purchases': { paramsTuple?: []; params?: {} }
     'catalog.manage.dashboard.tracks': { paramsTuple?: []; params?: {} }
     'catalog.manage.track_licenses.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
-  }
-  POST: {
-    'auth.access_token.store': { paramsTuple?: []; params?: {} }
-    'auth.access_token.destroy': { paramsTuple?: []; params?: {} }
-    'auth.new_account.store': { paramsTuple?: []; params?: {} }
-    'catalog.paypal_payments.create_order': { paramsTuple?: []; params?: {} }
-    'catalog.paypal_payments.capture_order': { paramsTuple: [ParamValue]; params: {'orderId': ParamValue} }
-    'catalog.manage.licenses.store': { paramsTuple?: []; params?: {} }
-    'catalog.manage.tags.store': { paramsTuple?: []; params?: {} }
-    'catalog.manage.musical_keys.store': { paramsTuple?: []; params?: {} }
-    'catalog.manage.tracks.store': { paramsTuple?: []; params?: {} }
   }
   PUT: {
     'profile.profile.update': { paramsTuple?: []; params?: {} }
