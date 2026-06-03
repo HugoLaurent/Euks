@@ -1,0 +1,50 @@
+services:
+  back:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: euks_back
+    restart: unless-stopped
+    ports:
+      - "3333:3333"
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - DB_HOST=db
+      - DB_PORT=5432
+    volumes:
+      - euks_covers:/app/public/covers
+      - euks_audio:/app/public/audio
+      - euks_wave:/app/storage/wave
+      - euks_archives:/app/storage/archives
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    container_name: euks_db
+    restart: unless-stopped
+    # Port 5432 déjà pris par family-blog-db → on expose sur 5433
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
+    volumes:
+      - euks_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_DATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  euks_pgdata:
+  euks_covers:
+  euks_audio:
+  euks_wave:
+  euks_archives:

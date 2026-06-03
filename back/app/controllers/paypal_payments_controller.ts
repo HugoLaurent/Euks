@@ -12,6 +12,7 @@ import {
 } from '#services/paypal_service'
 import { resolveCheckoutLicense } from '#services/licensing_service'
 import { downloadAccessService } from '#services/download_access_service'
+import { sendPurchaseConfirmation } from '#services/email_service'
 import { capturePayPalOrderValidator, createPayPalOrderValidator } from '#validators/paypal'
 import type { HttpContext } from '@adonisjs/core/http'
 import db from '@adonisjs/lucid/services/db'
@@ -255,6 +256,21 @@ export default class PaypalPaymentsController {
         await paymentOrder.save()
 
         await downloadAccessService.createAccessesAfterPurchase(paymentOrder, user.id, trx)
+
+        // Envoi du mail de confirmation (fire-and-forget — une erreur email
+        // ne doit pas faire échouer la transaction)
+        if (user.email && payerEmail) {
+          sendPurchaseConfirmation({
+            to: user.email,
+            trackTitle: paymentOrder.trackTitleSnapshot,
+            licenseTitle: paymentOrder.licenseTitleSnapshot,
+            amountCents: paymentOrder.amountCents,
+            currency: paymentOrder.currencyCode,
+            orderId: paymentOrder.paypalOrderId ?? String(paymentOrder.id),
+          }).catch((err) => {
+            console.error('[email] sendPurchaseConfirmation failed:', err?.message)
+          })
+        }
 
         return {
           id: captureResponse.id,

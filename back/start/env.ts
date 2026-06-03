@@ -44,6 +44,10 @@ export default await Env.create(new URL('../', import.meta.url), {
   OWNER_PASSWORD: Env.schema.string(),
   OWNER_FULL_NAME: Env.schema.string.optional(),
 
+  // Resend (email)
+  RESEND_API_KEY: Env.schema.string.optional(),
+  RESEND_FROM: Env.schema.string.optional(),
+
   // PayPal
   PAYPAL_ENVIRONMENT: Env.schema.string.optional(),
   PAYPAL_CLIENT_ID: Env.schema.string.optional(),
