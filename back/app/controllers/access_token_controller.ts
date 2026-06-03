@@ -10,15 +10,13 @@ import UserTransformer from '#transformers/user_transformer'
 export default class AccessTokenController {
   async store({ request, response, serialize }: HttpContext) {
     const { email, password } = await request.validateUsing(loginValidator)
-    const managedUser = findSystemUserByEmail(email)
 
-    if (!managedUser) {
-      throw new authErrors.E_INVALID_CREDENTIALS('Invalid user credentials')
+    // Sync system users before verifying their credentials
+    if (findSystemUserByEmail(email)) {
+      await ensureSystemUsers()
     }
 
-    await ensureSystemUsers()
-
-    const user = await User.verifyCredentials(managedUser.email, password)
+    const user = await User.verifyCredentials(email, password)
     const token = await User.accessTokens.create(user)
     const tokenValue = token.value!.release()
 

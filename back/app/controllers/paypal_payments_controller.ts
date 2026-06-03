@@ -14,6 +14,7 @@ import { resolveCheckoutLicense } from '#services/licensing_service'
 import { downloadAccessService } from '#services/download_access_service'
 import { capturePayPalOrderValidator, createPayPalOrderValidator } from '#validators/paypal'
 import type { HttpContext } from '@adonisjs/core/http'
+import db from '@adonisjs/lucid/services/db'
 
 type CaptureResponse = {
   id?: string
@@ -54,7 +55,7 @@ export default class PaypalPaymentsController {
     return getPayPalPublicConfig()
   }
 
-  async createOrder({ request, response }: HttpContext) {
+  async createOrder({ request, response, auth }: HttpContext) {
     if (!isPayPalConfigured()) {
       return response.status(503).send({
         enabled: false,
@@ -63,6 +64,7 @@ export default class PaypalPaymentsController {
       })
     }
 
+    const user = await auth.authenticate()
     const payload = await request.validateUsing(createPayPalOrderValidator)
     const resolution = await resolveCheckoutLicense(payload.trackId, payload.licenseId)
 
@@ -116,6 +118,7 @@ export default class PaypalPaymentsController {
 
     const paymentOrder = await PaymentOrder.create({
       provider: 'paypal',
+      userId: user.id,
       trackId: resolution.track.id,
       licenseId: resolution.license.id,
       trackTitleSnapshot: resolution.track.title,
@@ -183,86 +186,89 @@ export default class PaypalPaymentsController {
     }
 
     const payload = await request.validateUsing(capturePayPalOrderValidator)
-    const paymentOrder = await PaymentOrder.findBy('paypalOrderId', params.orderId)
+    const user = await auth.authenticate()
 
-    if (!paymentOrder) {
-      return this.errorResponse(response, 404, 'PayPal order not found', 'ORDER_NOT_FOUND')
-    }
+    return await db.transaction(async (trx) => {
+      const paymentOrder = await PaymentOrder.query({ client: trx })
+        .where('paypalOrderId', params.orderId)
+        .forUpdate()
+        .first()
 
-    if (payload.trackId !== undefined && paymentOrder.trackId !== payload.trackId) {
-      return this.errorResponse(
-        response,
-        409,
-        'Order does not match this track',
-        'ORDER_TRACK_MISMATCH'
-      )
-    }
+      if (!paymentOrder) {
+        return this.errorResponse(response, 404, 'PayPal order not found', 'ORDER_NOT_FOUND')
+      }
 
-    if (payload.licenseId !== undefined && paymentOrder.licenseIdSnapshot !== payload.licenseId) {
-      return this.errorResponse(
-        response,
-        409,
-        'Order does not match this license',
-        'ORDER_LICENSE_MISMATCH'
-      )
-    }
+      if (payload.trackId !== undefined && paymentOrder.trackId !== payload.trackId) {
+        return this.errorResponse(
+          response,
+          409,
+          'Order does not match this track',
+          'ORDER_TRACK_MISMATCH'
+        )
+      }
 
-    if (paymentOrder.paypalCaptureId || paymentOrder.status === 'COMPLETED') {
-      return this.errorResponse(
-        response,
-        409,
-        'PayPal order already captured',
-        'ORDER_ALREADY_CAPTURED'
-      )
-    }
+      if (payload.licenseId !== undefined && paymentOrder.licenseIdSnapshot !== payload.licenseId) {
+        return this.errorResponse(
+          response,
+          409,
+          'Order does not match this license',
+          'ORDER_LICENSE_MISMATCH'
+        )
+      }
 
-    try {
-      const captureResponse = (await capturePayPalOrder(params.orderId)) as CaptureResponse
-      const firstCapture = captureResponse.purchase_units?.[0]?.payments?.captures?.[0]
-      const payerEmail = captureResponse.payer?.email_address ?? null
+      if (paymentOrder.userId !== null && paymentOrder.userId !== user.id) {
+        return this.errorResponse(response, 403, 'This order does not belong to you', 'ORDER_FORBIDDEN')
+      }
 
-      // Try to get authenticated user, or null for anonymous purchase
-      let userId: number | null = null
+      if (paymentOrder.paypalCaptureId || paymentOrder.status === 'COMPLETED') {
+        return this.errorResponse(
+          response,
+          409,
+          'PayPal order already captured',
+          'ORDER_ALREADY_CAPTURED'
+        )
+      }
+
       try {
-        const user = await auth.authenticate()
-        userId = user.id
-      } catch {
-        // User not authenticated, that's okay for anonymous purchases
+        const captureResponse = (await capturePayPalOrder(params.orderId)) as CaptureResponse
+        const firstCapture = captureResponse.purchase_units?.[0]?.payments?.captures?.[0]
+        const payerEmail = captureResponse.payer?.email_address ?? null
+
+        paymentOrder.useTransaction(trx)
+        paymentOrder.merge({
+          userId: user.id,
+          status: this.toPaymentOrderStatus(
+            captureResponse.status ?? firstCapture?.status,
+            'COMPLETED'
+          ),
+          paypalCaptureId: firstCapture?.id ?? paymentOrder.paypalCaptureId,
+          payerEmail,
+          capturePayload: JSON.stringify(captureResponse),
+          errorPayload: null,
+        })
+
+        await paymentOrder.save()
+
+        await downloadAccessService.createAccessesAfterPurchase(paymentOrder, user.id, trx)
+
+        return {
+          id: captureResponse.id,
+          status: captureResponse.status,
+          payer: captureResponse.payer,
+          purchase_units: captureResponse.purchase_units,
+        }
+      } catch (error) {
+        paymentOrder.useTransaction(trx)
+        paymentOrder.merge({
+          status: 'FAILED',
+          errorPayload: JSON.stringify(this.normalizeErrorPayload(error)),
+        })
+
+        await paymentOrder.save()
+
+        return this.handlePayPalError(response, error, 'PayPal capture failed', true)
       }
-
-      paymentOrder.merge({
-        userId: userId,
-        status: this.toPaymentOrderStatus(
-          captureResponse.status ?? firstCapture?.status,
-          'COMPLETED'
-        ),
-        paypalCaptureId: firstCapture?.id ?? paymentOrder.paypalCaptureId,
-        payerEmail,
-        capturePayload: JSON.stringify(captureResponse),
-        errorPayload: null,
-      })
-
-      await paymentOrder.save()
-
-      // Create download accesses for this purchase
-      await downloadAccessService.createAccessesAfterPurchase(paymentOrder, userId)
-
-      return {
-        id: captureResponse.id,
-        status: captureResponse.status,
-        payer: captureResponse.payer,
-        purchase_units: captureResponse.purchase_units,
-      }
-    } catch (error) {
-      paymentOrder.merge({
-        status: 'FAILED',
-        errorPayload: JSON.stringify(this.normalizeErrorPayload(error)),
-      })
-
-      await paymentOrder.save()
-
-      return this.handlePayPalError(response, error, 'PayPal capture failed', true)
-    }
+    })
   }
 
   private handlePayPalError(

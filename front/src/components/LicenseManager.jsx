@@ -31,6 +31,7 @@ const INITIAL_FORM = {
   title: "",
   description: "",
   priceEuro: "",
+  sortOrder: "0",
   isActive: true,
   isTemplate: true,
   templateCategory: "basic",
@@ -67,9 +68,13 @@ function nullableNumber(value) {
   if (value === "" || value === null || value === undefined) {
     return null;
   }
-
   const numberValue = Number(value);
   return Number.isFinite(numberValue) ? numberValue : null;
+}
+
+function safeInteger(value, fallback = 0) {
+  const n = parseInt(String(value ?? ""), 10);
+  return Number.isFinite(n) ? n : fallback;
 }
 
 function parseEuroToCents(value, { allowZero = false } = {}) {
@@ -111,12 +116,11 @@ function formatPriceLabel(cents) {
   return `${(amount / 100).toFixed(2)} EUR`;
 }
 
-function formatNumberLabel(value) {
+function formatNumberLabel(value, language = "fr") {
   if (value === null || value === undefined || value === "") {
-    return "no limit";
+    return language === "fr" ? "illimité" : "no limit";
   }
-
-  return new Intl.NumberFormat("fr-FR").format(Number(value));
+  return new Intl.NumberFormat(language === "fr" ? "fr-FR" : "en-US").format(Number(value));
 }
 
 function getCategoryLabel(value) {
@@ -129,6 +133,7 @@ function toFormValue(license) {
     ...license,
     audioFormats: license.audioFormats || [],
     priceEuro: formatCentsToEuroInput(license.priceCents),
+    sortOrder: String(license.sortOrder ?? 0),
     maxStreams: license.maxStreams ?? "",
     maxSales: license.maxSales ?? "",
     radioStations: license.radioStations ?? "",
@@ -138,11 +143,12 @@ function toFormValue(license) {
 }
 
 function formToPayload(form) {
-  const { priceEuro, ...licenseFields } = form;
+  const { priceEuro, sortOrder, ...licenseFields } = form;
 
   return {
     ...licenseFields,
     priceCents: parseEuroToCents(priceEuro, { allowZero: true }) ?? 0,
+    sortOrder: safeInteger(sortOrder, 0),
     maxStreams: nullableNumber(form.maxStreams),
     maxSales: nullableNumber(form.maxSales),
     radioStations: nullableNumber(form.radioStations),
@@ -409,6 +415,9 @@ function LicenseManager({ language = "fr" }) {
       }
 
       await loadLicenses();
+      if (!editingLicenseId) {
+        setForm(INITIAL_FORM);
+      }
       setSubmitState({
         isLoading: false,
         error: "",
@@ -547,10 +556,10 @@ function LicenseManager({ language = "fr" }) {
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-300 sm:grid-cols-4">
-                  <span>Streams: {formatNumberLabel(license.maxStreams)}</span>
-                  <span>Sales: {formatNumberLabel(license.maxSales)}</span>
-                  <span>Video: {formatNumberLabel(license.videoClipsLimit)}</span>
-                  <span>Radio: {formatNumberLabel(license.radioStations)}</span>
+                  <span>Streams: {formatNumberLabel(license.maxStreams, language)}</span>
+                  <span>Sales: {formatNumberLabel(license.maxSales, language)}</span>
+                  <span>Video: {formatNumberLabel(license.videoClipsLimit, language)}</span>
+                  <span>Radio: {formatNumberLabel(license.radioStations, language)}</span>
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-300">
@@ -659,6 +668,16 @@ function LicenseManager({ language = "fr" }) {
                 </option>
               ))}
             </select>
+          </label>
+          <label className="text-sm text-slate-300">
+            {language === "fr" ? "Ordre d'affichage" : "Sort order"}
+            <input
+              type="number"
+              min="0"
+              value={form.sortOrder}
+              onChange={(event) => updateField("sortOrder", event.target.value)}
+              className="mt-2 w-full rounded-xl border border-white/12 bg-white/5 px-3 py-2 text-white outline-none"
+            />
           </label>
           <div className="text-sm text-slate-300">
             {copy.paymentMode}

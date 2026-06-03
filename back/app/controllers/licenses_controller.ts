@@ -62,8 +62,6 @@ export default class LicensesController {
   async store({ request, response, serialize, auth }: HttpContext) {
     const payload = await request.validateUsing(createLicenseValidator)
 
-    await auth.authenticate()
-
     const priceCents = payload.priceCents ?? 0
     const isPaypalEnabled = payload.isPaypalEnabled ?? true
 
@@ -102,8 +100,6 @@ export default class LicensesController {
   }
 
   async update({ params, request, response, serialize, auth }: HttpContext) {
-    await auth.authenticate()
-
     const license = await License.findOrFail(params.id)
 
     if (!this.canManageLicense(auth.user!, license)) {
@@ -125,8 +121,6 @@ export default class LicensesController {
   }
 
   async destroy({ params, response, auth }: HttpContext) {
-    await auth.authenticate()
-
     const license = await License.findOrFail(params.id)
 
     if (!this.canManageLicense(auth.user!, license)) {

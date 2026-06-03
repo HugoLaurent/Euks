@@ -1,3 +1,4 @@
+import app from '@adonisjs/core/services/app'
 import type { HttpContext } from '@adonisjs/core/http'
 import PaymentOrder from '#models/payment_order'
 import DownloadAccess from '#models/download_access'
@@ -128,42 +129,45 @@ export default class ClientDashboardController {
       })
     }
 
-    // Determine file path based on fileType
-    let filePath: string | null = null
+    // Determine file path based on fileType.
+    // Cover and preview audio live in public/; wave and stems live in storage/.
+    let absoluteFilePath: string | null = null
     let fileName: string = ''
 
     switch (access.fileType) {
       case 'audio':
-        filePath = access.track.audioFilePath
+        absoluteFilePath = access.track.audioFilePath
+          ? app.publicPath(access.track.audioFilePath.replace(/^\//, ''))
+          : null
         fileName = `${access.track.title}.mp3`
         break
       case 'stems':
-        filePath = access.track.zipFilePath
+        absoluteFilePath = access.track.zipFilePath
+          ? app.makePath('storage', access.track.zipFilePath)
+          : null
         fileName = `${access.track.title}-stems.zip`
         break
       case 'cover':
-        filePath = access.track.coverImagePath
+        absoluteFilePath = access.track.coverImagePath
+          ? app.publicPath(access.track.coverImagePath.replace(/^\//, ''))
+          : null
         fileName = `${access.track.title}-cover.jpg`
         break
       case 'wave':
-        filePath = access.track.waveFilePath
+        absoluteFilePath = access.track.waveFilePath
+          ? app.makePath('storage', access.track.waveFilePath)
+          : null
         fileName = `${access.track.title}-wave.wav`
         break
     }
 
-    if (!filePath) {
-      return response.notFound({
-        message: 'File not found',
-      })
+    if (!absoluteFilePath) {
+      return response.notFound({ message: 'File not found' })
     }
 
-    // Record download
-    await DownloadAccess.query()
-      .where('id', access.id)
-      .increment('downloadCount', 1)
+    await DownloadAccess.query().where('id', access.id).increment('downloadCount', 1)
 
-    // Send file
-    return response.download(filePath, fileName)
+    return response.download(absoluteFilePath, fileName)
   }
 
   /**

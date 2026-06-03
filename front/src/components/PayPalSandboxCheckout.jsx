@@ -61,6 +61,7 @@ function PayPalSandboxCheckout({
   language,
   license,
   track,
+  onPurchaseSuccess,
 }) {
   const containerRef = useRef(null);
   const [configState, setConfigState] = useState({
@@ -248,6 +249,8 @@ function PayPalSandboxCheckout({
               error: "",
               status: "approved",
             });
+
+            onPurchaseSuccess?.();
           },
           onCancel: () => {
             setCheckoutState((prev) => ({
@@ -314,6 +317,7 @@ function PayPalSandboxCheckout({
     isEnabled,
     language,
     license,
+    onPurchaseSuccess,
     track,
   ]);
 
@@ -437,6 +441,12 @@ function PayPalSandboxCheckout({
                     </p>
                   </>
                 ) : null}
+                <a
+                  href="/client-dashboard"
+                  className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-300/40 bg-emerald-400/15 px-4 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-400/25"
+                >
+                  {copy.goToDownloads ?? "Go to my downloads"}
+                </a>
               </div>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { API_BASE_URL, AUTH_USER_STORAGE_KEY } from "@/lib";
+import { useAppContext } from "@/AppContext";
 
 async function parseResponsePayload(response) {
   const raw = await response.text();
@@ -15,7 +16,8 @@ async function parseResponsePayload(response) {
   }
 }
 
-function SignupPage({ language = "fr" }) {
+function SignupPage() {
+  const { language = "fr" } = useAppContext();
   const [formData, setFormData] = useState({
     email: "",
     password: "",

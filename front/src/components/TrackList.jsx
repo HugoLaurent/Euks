@@ -26,8 +26,8 @@ function TrackList({
     <div className="music-list-scroll max-h-170 space-y-3 overflow-y-auto">
       {tracks.map((track) => (
         <TrackRow
-          key={`${track.title}-${track.artist}`}
-          isActive={selectedTrack.title === track.title}
+          key={track.id}
+          isActive={selectedTrack?.id === track.id}
           labels={labels}
           onPurchase={onPurchase}
           onSelect={() => onTrackSelect(track)}

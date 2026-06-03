@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Play, X, Sparkles, ChevronDown, ShieldCheck } from "lucide-react";
 import PayPalSandboxCheckout from "@/components/PayPalSandboxCheckout.jsx";
+import { isLoggedIn } from "@/lib";
 
 function getDefaultLicenseId(cards) {
   const cheapestCard = cards
@@ -69,6 +70,9 @@ const purchaseModalCopy = {
     paypalUnavailable:
       "Le bouton PayPal n'est pas disponible pour cette configuration.",
     noLicenses: "Aucune licence n'est attachee a cette musique pour le moment.",
+    signInRequired: "Tu dois être connecté pour acheter.",
+    signInButton: "Se connecter",
+    goToDownloads: "Voir mes téléchargements",
   },
   en: {
     dialogLabel: (title) => `Purchase modal for ${title}`,
@@ -120,10 +124,14 @@ const purchaseModalCopy = {
     paypalUnavailable:
       "The PayPal button is unavailable for this configuration.",
     noLicenses: "No licenses are attached to this track yet.",
+    signInRequired: "You must be signed in to purchase.",
+    signInButton: "Sign in",
+    goToDownloads: "Go to my downloads",
   },
 };
 
-function PurchaseModal({ isOpen, onClose, onPlay, track, language = "en" }) {
+function PurchaseModal({ isOpen, onClose, onPlay, onPurchaseSuccess, track, language = "en" }) {
+  const userIsLoggedIn = isLoggedIn();
   const copy = purchaseModalCopy[language] ?? purchaseModalCopy.en;
   const licenseCards = track?.licenseCards ?? [];
   const defaultLicenseId = getDefaultLicenseId(licenseCards);
@@ -349,13 +357,26 @@ function PurchaseModal({ isOpen, onClose, onPlay, track, language = "en" }) {
                     </div>
                   </div>
 
-                  <PayPalSandboxCheckout
-                    copy={copy}
-                    isEnabled={canSimulatePayment}
-                    language={language}
-                    license={selectedLicense}
-                    track={track}
-                  />
+                  {!userIsLoggedIn ? (
+                    <div className="rounded-2xl border border-amber-300/25 bg-amber-400/10 p-4 text-sm text-amber-50">
+                      <p className="font-semibold">{copy.signInRequired}</p>
+                      <a
+                        href={`/login?redirect=${encodeURIComponent(window.location.pathname)}`}
+                        className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-300/35 bg-amber-400/20 px-4 py-2 text-xs font-semibold text-amber-100 transition hover:bg-amber-400/30"
+                      >
+                        {copy.signInButton}
+                      </a>
+                    </div>
+                  ) : (
+                    <PayPalSandboxCheckout
+                      copy={copy}
+                      isEnabled={canSimulatePayment}
+                      language={language}
+                      license={selectedLicense}
+                      track={track}
+                      onPurchaseSuccess={onPurchaseSuccess}
+                    />
+                  )}
                 </div>
               ) : null}
             </div>

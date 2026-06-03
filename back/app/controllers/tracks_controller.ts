@@ -9,7 +9,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import type { MultipartFile } from '@adonisjs/bodyparser/types'
 import { DateTime } from 'luxon'
 import { randomUUID } from 'node:crypto'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, unlink } from 'node:fs/promises'
 
 type TrackMutationPayload = {
   title?: string
@@ -146,10 +146,11 @@ export default class TracksController {
     const waveFilePath = await this.resolveUploadedMediaPath({
       file: this.getFirstFile(request, ['waveFile', 'previewWav']),
       fallbackPath: payload.waveFilePath,
-      folder: 'audio',
+      folder: 'wave',
       allowedExtensions: ['wav'],
       field: 'waveFilePath',
       label: 'wave file',
+      useStorage: true,
     })
 
     if ('error' in waveFilePath) {
@@ -163,6 +164,7 @@ export default class TracksController {
       allowedExtensions: ['zip'],
       field: 'zipFilePath',
       label: 'zip file',
+      useStorage: true,
     })
 
     if ('error' in zipFilePath) {
@@ -275,10 +277,11 @@ export default class TracksController {
       const waveFilePath = await this.resolveUploadedMediaPath({
         file: this.getFirstFile(request, ['waveFile', 'previewWav']),
         fallbackPath: payload.waveFilePath,
-        folder: 'audio',
+        folder: 'wave',
         allowedExtensions: ['wav'],
         field: 'waveFilePath',
         label: 'wave file',
+        useStorage: true,
       })
 
       if ('error' in waveFilePath) {
@@ -296,6 +299,7 @@ export default class TracksController {
         allowedExtensions: ['zip'],
         field: 'zipFilePath',
         label: 'zip file',
+        useStorage: true,
       })
 
       if ('error' in zipFilePath) {
@@ -305,12 +309,9 @@ export default class TracksController {
       track.zipFilePath = zipFilePath.path
     }
 
+    // File paths are already set directly on `track` above; only merge non-file fields here.
     track.merge({
       ...(payload.title !== undefined ? { title: payload.title } : {}),
-      ...(payload.coverImagePath !== undefined ? { coverImagePath: payload.coverImagePath } : {}),
-      ...(payload.audioFilePath !== undefined ? { audioFilePath: payload.audioFilePath } : {}),
-      ...(payload.waveFilePath !== undefined ? { waveFilePath: payload.waveFilePath } : {}),
-      ...(payload.zipFilePath !== undefined ? { zipFilePath: payload.zipFilePath } : {}),
       ...(payload.durationSeconds !== undefined
         ? { durationSeconds: payload.durationSeconds }
         : {}),
@@ -340,11 +341,25 @@ export default class TracksController {
 
   async destroy({ params }: HttpContext) {
     const track = await Track.findOrFail(params.id)
+
+    const publicFiles = [track.coverImagePath, track.audioFilePath]
+    const storageFiles = [track.waveFilePath, track.zipFilePath]
+
     await track.delete()
 
-    return {
-      message: 'Track deleted successfully',
+    for (const path of publicFiles) {
+      if (path) {
+        await unlink(app.publicPath(path.replace(/^\//, ''))).catch(() => {})
+      }
     }
+
+    for (const path of storageFiles) {
+      if (path) {
+        await unlink(app.makePath('storage', path)).catch(() => {})
+      }
+    }
+
+    return { message: 'Track deleted successfully' }
   }
 
   private baseQuery() {
@@ -460,46 +475,36 @@ export default class TracksController {
     allowedExtensions: string[]
     field: string
     label: string
+    useStorage?: boolean
   }): Promise<{ path: string | null } | { error: { field: string; message: string } }> {
     const uploadedFile = options.file
 
     if (uploadedFile) {
       if (!uploadedFile.isValid) {
         const message = uploadedFile.errors[0]?.message ?? `Invalid ${options.label}`
-        return {
-          error: {
-            field: options.field,
-            message,
-          },
-        }
+        return { error: { field: options.field, message } }
       }
 
       const extension = uploadedFile.extname?.toLowerCase()
       if (!extension || !options.allowedExtensions.includes(extension)) {
-        return {
-          error: {
-            field: options.field,
-            message: `Invalid ${options.label} format`,
-          },
-        }
+        return { error: { field: options.field, message: `Invalid ${options.label} format` } }
       }
 
-      const destinationFolder = app.publicPath(options.folder)
+      const destinationFolder = options.useStorage
+        ? app.makePath('storage', options.folder)
+        : app.publicPath(options.folder)
+
       await mkdir(destinationFolder, { recursive: true })
 
       const fileName = `${options.field}-${randomUUID()}.${extension}`
-      await uploadedFile.move(destinationFolder, {
-        name: fileName,
-        overwrite: true,
-      })
+      await uploadedFile.move(destinationFolder, { name: fileName, overwrite: true })
 
+      // Public files use an absolute-looking web path; storage files use a relative storage path.
       return {
-        path: `/${options.folder}/${fileName}`,
+        path: options.useStorage ? `${options.folder}/${fileName}` : `/${options.folder}/${fileName}`,
       }
     }
 
-    return {
-      path: options.fallbackPath ?? null,
-    }
+    return { path: options.fallbackPath ?? null }
   }
 }

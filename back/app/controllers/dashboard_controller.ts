@@ -18,9 +18,13 @@ export default class DashboardController {
   async summary() {
     const todayStart = DateTime.local().startOf('day').toSQL()
 
+    const monthStart = DateTime.local().startOf('month').toSQL()
+
     const [
       purchasesTodayCount,
       revenueTodaySum,
+      purchasesMonthCount,
+      revenueMonthSum,
       completedPurchasesCount,
       totalRevenueSum,
       totalTracksCount,
@@ -31,19 +35,23 @@ export default class DashboardController {
     ] = await Promise.all([
       this.countPayments({ status: 'COMPLETED', since: todayStart }),
       this.sumPayments({ status: 'COMPLETED', since: todayStart }),
+      this.countPayments({ status: 'COMPLETED', since: monthStart }),
+      this.sumPayments({ status: 'COMPLETED', since: monthStart }),
       this.countPayments({ status: 'COMPLETED' }),
       this.sumPayments({ status: 'COMPLETED' }),
       this.countTracks(),
       this.countTracks({ isActive: true }),
       this.countTracks({ isActive: false }),
       this.countTracks({ isSold: true }),
-      PaymentOrder.query().orderBy('created_at', 'desc').limit(5),
+      PaymentOrder.query().preload('track').preload('license').orderBy('created_at', 'desc').limit(5),
     ])
 
     return {
       stats: {
         purchasesToday: purchasesTodayCount,
         revenueTodayCents: revenueTodaySum,
+        purchasesMonth: purchasesMonthCount,
+        revenueMonthCents: revenueMonthSum,
         completedPurchases: completedPurchasesCount,
         totalRevenueCents: totalRevenueSum,
         totalTracks: totalTracksCount,

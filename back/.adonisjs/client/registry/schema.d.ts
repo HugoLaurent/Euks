@@ -71,12 +71,12 @@ export interface Registry {
     methods: ["DELETE"]
     pattern: '/api/v1/account/profile'
     types: {
-      body: {}
+      body: ExtractBody<InferInput<(typeof import('#validators/profile').deleteAccountValidator)>>
       paramsTuple: []
       params: {}
-      query: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/profile').deleteAccountValidator)>>
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['delete']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['delete']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['delete']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
   'profile.client_dashboard.purchases': {

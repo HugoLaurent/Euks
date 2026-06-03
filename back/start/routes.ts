@@ -62,12 +62,12 @@ router
         router.get('tracks', [TracksController, 'index'])
         router.get('tracks/:id', [TracksController, 'show'])
         router.get('payments/paypal/config', [PaypalPaymentsController, 'config'])
-        router.post('payments/paypal/orders', [PaypalPaymentsController, 'createOrder'])
+        router.post('payments/paypal/orders', [PaypalPaymentsController, 'createOrder']).use(middleware.auth())
         router.post('payments/paypal/orders/:orderId/capture', [
           PaypalPaymentsController,
           'captureOrder',
-        ])
-        router.get('downloads/:token', [ClientDashboardController, 'download'])
+        ]).use(middleware.auth())
+        router.get('downloads/:token', [ClientDashboardController, 'download']).use(middleware.auth())
       })
       .as('catalog')
 
@@ -96,7 +96,7 @@ router
         router.put('tracks/:id/licenses', [TrackLicensesController, 'update'])
       })
       .as('catalog.manage')
-      .use(middleware.auth())
+      .use([middleware.auth(), middleware.admin()])
   })
   .prefix('/api/v1')
 

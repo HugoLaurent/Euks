@@ -113,7 +113,7 @@ function PlayerCard({
             </p>
             {!hasAudio ? (
               <p className="mt-1 text-xs text-amber-200">
-                Aucun aperçu disponible
+                {labels.noPreview ?? "No preview available"}
               </p>
             ) : null}
             <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-200">

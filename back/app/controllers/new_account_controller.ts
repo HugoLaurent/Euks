@@ -1,5 +1,7 @@
+import app from '@adonisjs/core/services/app'
 import type { HttpContext } from '@adonisjs/core/http'
 import User from '#models/user'
+import { AUTH_COOKIE_NAME } from '#middleware/cookie_token_middleware'
 import { signupValidator } from '#validators/user'
 
 export default class NewAccountController {
@@ -45,6 +47,14 @@ export default class NewAccountController {
 
       // Generate access token for auto-login after signup
       const token = await User.accessTokens.create(user)
+      const tokenValue = token.value!.release()
+
+      response.cookie(AUTH_COOKIE_NAME, tokenValue, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: app.inProduction,
+        path: '/',
+      })
 
       return response.created({
         user: {
@@ -53,7 +63,7 @@ export default class NewAccountController {
           fullName: user.fullName,
           role: user.role,
         },
-        token: token.value!.release(),
+        token: tokenValue,
       })
     } catch (error) {
       return response.unprocessableEntity({

@@ -11,7 +11,7 @@ export default class DownloadAccess extends BaseModel {
   declare id: number
 
   @column()
-  declare userId: number
+  declare userId: number | null
 
   @column()
   declare paymentOrderId: number

@@ -1,7 +1,7 @@
 import UserTransformer from '#transformers/user_transformer'
 import type { HttpContext } from '@adonisjs/core/http'
 import User from '#models/user'
-import { updateProfileValidator } from '#validators/profile'
+import { deleteAccountValidator, updateProfileValidator } from '#validators/profile'
 import hash from '@adonisjs/core/services/hash'
 
 export default class ProfileController {
@@ -39,16 +39,10 @@ export default class ProfileController {
         user.fullName = data.fullName
       }
 
-      // Update password if provided
       if (data.newPassword) {
         if (!data.currentPassword) {
           return response.unprocessableEntity({
-            errors: [
-              {
-                field: 'currentPassword',
-                message: 'Current password is required to set new password',
-              },
-            ],
+            errors: [{ field: 'currentPassword', message: 'Current password is required to set new password' }],
           })
         }
 
@@ -91,23 +85,9 @@ export default class ProfileController {
    */
   async delete({ auth, request, response }: HttpContext) {
     const user = auth.user!
-
-    // Require password confirmation for security
-    const { password } = request.only(['password'])
-
-    if (!password) {
-      return response.unprocessableEntity({
-        errors: [
-          {
-            field: 'password',
-            message: 'Password is required to delete account',
-          },
-        ],
-      })
-    }
+    const { password } = await request.validateUsing(deleteAccountValidator)
 
     try {
-      // Verify password
       const isValid = await hash.verify(user.password, password)
       if (!isValid) {
         return response.unprocessableEntity({

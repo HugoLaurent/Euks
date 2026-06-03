@@ -532,7 +532,7 @@ async function fetchTracks() {
     }
 
     allTracks.push(...(payload.data || []));
-    lastPage = payload.metadata?.lastPage || 1;
+    lastPage = payload.meta?.lastPage ?? payload.metadata?.lastPage ?? 1;
     page += 1;
   } while (page <= lastPage);
 

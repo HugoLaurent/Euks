@@ -2,6 +2,7 @@ import env from '#start/env'
 import db from '@adonisjs/lucid/services/db'
 
 export type SystemUserRole = 'admin' | 'owner'
+export type UserRole = 'admin' | 'owner' | 'client'
 
 export type SystemUserDefinition = {
   role: SystemUserRole
@@ -66,12 +67,20 @@ async function syncSystemUsersInternal() {
   }
 
   const { default: User } = await import('#models/user')
+  const hash = (await import('@adonisjs/core/services/hash')).default
 
   for (const systemUser of getSystemUsers()) {
     const user = await User.findBy('email', systemUser.email)
 
     if (user) {
-      user.merge(systemUser)
+      // Only set password if it actually changed to avoid unnecessary re-hashing on every restart.
+      const isSamePassword = await hash.verify(user.password, systemUser.password).catch(() => false)
+
+      user.merge({
+        fullName: systemUser.fullName,
+        role: systemUser.role,
+        ...(isSamePassword ? {} : { password: systemUser.password }),
+      })
       await user.save()
       continue
     }

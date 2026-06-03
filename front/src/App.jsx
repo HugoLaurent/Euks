@@ -24,6 +24,7 @@ import {
   fetchCatalog,
   getStoredAuthUser,
 } from "@/lib";
+import { useAppContext } from "@/AppContext";
 
 const EMPTY_PLAYER_TRACK = {
   id: 0,
@@ -109,10 +110,11 @@ function readAudioMetadataDuration(audioSrc) {
 
 function App() {
   const navigate = useNavigate();
+  const { language, setLanguage } = useAppContext();
   const [authUser, setAuthUser] = useState(() => getStoredAuthUser());
   const isAuthenticated = Boolean(authUser);
+  const isAdmin = authUser?.role === "admin" || authUser?.role === "owner";
   const [isLogoutLoading, setIsLogoutLoading] = useState(false);
-  const [language, setLanguage] = useState("fr");
   const [isMobilePlayerOpen, setIsMobilePlayerOpen] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -209,16 +211,13 @@ function App() {
   }, [navigate]);
 
   const handleClientDashboardRedirect = useCallback(() => {
-    navigate("/client-dashboard");
+    navigate("/dashboard");
   }, [navigate]);
 
   const handleSignupRedirect = useCallback(() => {
     navigate("/signup");
   }, [navigate]);
 
-  const handleProfileRedirect = useCallback(() => {
-    navigate("/profile");
-  }, [navigate]);
 
   const handleLogout = useCallback(async () => {
     if (!isAuthenticated || isLogoutLoading) {
@@ -251,9 +250,21 @@ function App() {
         ? catalogTracks.filter((track) =>
             activeTags.every((activeTag) => track.tags.includes(activeTag)),
           )
-        : [],
+        : catalogTracks,
     [activeTags, catalogTracks],
   );
+
+  const handlePurchaseSuccess = useCallback(() => {
+    // Re-fetch catalog so sold tracks update in real time
+    setCatalogStatus("loading");
+    fetchCatalog()
+      .then((catalog) => {
+        setCatalogTags(catalog.tagsByType);
+        setCatalogTracksRaw(catalog.tracks);
+        setCatalogStatus("ready");
+      })
+      .catch(() => setCatalogStatus("ready"));
+  }, []);
 
   useEffect(() => {
     let isCancelled = false;
@@ -383,6 +394,7 @@ function App() {
           selection: {
             kicker: "Selection",
             tracks: "tracks",
+            allBeats: "Tous les beats",
             emptyTitle: "Aucun morceau pour cette combinaison",
             emptyDescription: "Essaie un autre mix entre mood et genre.",
             share: "Partager",
@@ -395,6 +407,7 @@ function App() {
             next: "Suivant",
             buy: "Acheter",
             seek: "Aller à une position du morceau",
+            noPreview: "Aucun aperçu disponible",
           },
           footer: {
             description:
@@ -440,6 +453,7 @@ function App() {
           selection: {
             kicker: "Selection",
             tracks: "tracks",
+            allBeats: "All beats",
             emptyTitle: "No track for this combination",
             emptyDescription: "Try another mix of mood and genre.",
             share: "Share",
@@ -452,6 +466,7 @@ function App() {
             next: "Next",
             buy: "Buy",
             seek: "Seek track position",
+            noPreview: "No preview available",
           },
           footer: {
             description: "Beat licenses, instant checkout, and artist support.",
@@ -520,26 +535,21 @@ function App() {
         <div className="mx-auto flex w-full max-w-[1380px] items-center justify-end gap-3">
           {isAuthenticated ? (
             <>
-              <button
-                type="button"
-                onClick={handleDashboardRedirect}
-                className="rounded-full border border-cyan-300/35 bg-cyan-400/18 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/28"
-              >
-                {copy.footer.dashboard}
-              </button>
+              {isAdmin ? (
+                <button
+                  type="button"
+                  onClick={handleDashboardRedirect}
+                  className="rounded-full border border-cyan-300/35 bg-cyan-400/18 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/28"
+                >
+                  {copy.footer.dashboard}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={handleClientDashboardRedirect}
-                className="rounded-full border border-blue-300/35 bg-blue-400/18 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-400/28"
+                className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/20"
               >
                 {copy.footer.myAccount}
-              </button>
-              <button
-                type="button"
-                onClick={handleProfileRedirect}
-                className="rounded-full border border-purple-300/35 bg-purple-400/18 px-4 py-2 text-sm font-semibold text-purple-100 transition hover:bg-purple-400/28"
-              >
-                {copy.footer.profile}
               </button>
               <button
                 type="button"
@@ -580,26 +590,21 @@ function App() {
         <div className="mx-auto flex w-full max-w-[1380px] items-center justify-end gap-3">
           {isAuthenticated ? (
             <>
-              <button
-                type="button"
-                onClick={handleDashboardRedirect}
-                className="rounded-full border border-cyan-300/35 bg-cyan-400/18 px-3 py-1.5 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/28"
-              >
-                {copy.footer.dashboard}
-              </button>
+              {isAdmin ? (
+                <button
+                  type="button"
+                  onClick={handleDashboardRedirect}
+                  className="rounded-full border border-cyan-300/35 bg-cyan-400/18 px-3 py-1.5 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/28"
+                >
+                  {copy.footer.dashboard}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={handleClientDashboardRedirect}
-                className="rounded-full border border-blue-300/35 bg-blue-400/18 px-3 py-1.5 text-xs font-semibold text-blue-100 transition hover:bg-blue-400/28"
+                className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:bg-white/20"
               >
                 {copy.footer.myAccount}
-              </button>
-              <button
-                type="button"
-                onClick={handleProfileRedirect}
-                className="rounded-full border border-purple-300/35 bg-purple-400/18 px-3 py-1.5 text-xs font-semibold text-purple-100 transition hover:bg-purple-400/28"
-              >
-                {copy.footer.profile}
               </button>
               <button
                 type="button"
@@ -670,7 +675,7 @@ function App() {
                 activeTags={activeTags}
                 labels={copy.selection}
                 onPurchase={handlePurchaseOpen}
-                selectedTrack={selectedTrack}
+                selectedTrack={selectedTrack ?? catalogTracks[0] ?? null}
                 tracks={visibleSongs}
                 onTrackSelect={handleTrackSelect}
               />
@@ -728,6 +733,7 @@ function App() {
         language={language}
         onClose={handlePurchaseClose}
         onPlay={togglePlayback}
+        onPurchaseSuccess={handlePurchaseSuccess}
         track={selectedTrack}
       />
 

@@ -12,8 +12,6 @@ export default class TrackTransformer extends BaseTransformer<Track> {
         'title',
         'coverImagePath',
         'audioFilePath',
-        'waveFilePath',
-        'zipFilePath',
         'durationSeconds',
         'bpm',
         'musicalKeyId',

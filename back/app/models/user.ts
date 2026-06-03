@@ -1,4 +1,4 @@
-import type { SystemUserRole } from '#services/system_users'
+import type { UserRole } from '#services/system_users'
 import { UserSchema } from '#database/schema'
 import hash from '@adonisjs/core/services/hash'
 import { compose } from '@adonisjs/core/helpers'
@@ -13,7 +13,7 @@ export default class User extends compose(UserSchema, withAuthFinder(hash)) {
   static accessTokens = DbAccessTokensProvider.forModel(User)
   declare currentAccessToken?: AccessToken
   @column()
-  declare role: SystemUserRole
+  declare role: UserRole
 
   @hasMany(() => PaymentOrder)
   declare paymentOrders: HasMany<typeof PaymentOrder>

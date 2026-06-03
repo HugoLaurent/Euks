@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { API_BASE_URL, AUTH_USER_STORAGE_KEY } from "@/lib";
+import { useAppContext } from "@/AppContext";
 
 async function parseResponsePayload(response) {
   const raw = await response.text();
@@ -15,7 +16,8 @@ async function parseResponsePayload(response) {
   }
 }
 
-function LoginPage({ language = "fr" }) {
+function LoginPage() {
+  const { language = "fr" } = useAppContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -28,14 +30,14 @@ function LoginPage({ language = "fr" }) {
           title: "Connexion",
           subtitle: "Connecte-toi pour accéder à ton espace.",
           emailLabel: "Adresse email",
-          emailPlaceholder: "admin@euks.local",
+          emailPlaceholder: "votre@email.com",
           passwordLabel: "Mot de passe",
           passwordPlaceholder: "Ton mot de passe",
           submit: "Se connecter",
           loading: "Connexion en cours...",
           backToStore: "Retour au store",
-          hintTitle: "Comptes de dev",
-          hintBody: "admin@euks.local / Admin12345!",
+          hintTitle: null,
+          hintBody: null,
           defaultError: "Impossible de se connecter.",
           signupLink: "Tu n'as pas encore de compte ?",
           signupLinkText: "S'inscrire",
@@ -44,14 +46,14 @@ function LoginPage({ language = "fr" }) {
           title: "Sign in",
           subtitle: "Sign in to access your account.",
           emailLabel: "Email",
-          emailPlaceholder: "admin@euks.local",
+          emailPlaceholder: "votre@email.com",
           passwordLabel: "Password",
           passwordPlaceholder: "Your password",
           submit: "Sign in",
           loading: "Signing in...",
           backToStore: "Back to store",
-          hintTitle: "Dev account",
-          hintBody: "admin@euks.local / Admin12345!",
+          hintTitle: null,
+          hintBody: null,
           defaultError: "Unable to sign in.",
           signupLink: "Don't have an account?",
           signupLinkText: "Sign up",
@@ -191,11 +193,6 @@ function LoginPage({ language = "fr" }) {
             {isLoading ? copy.loading : copy.submit}
           </button>
         </form>
-
-        <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-slate-300">
-          <p className="font-semibold text-slate-200">{copy.hintTitle}</p>
-          <p className="mt-1">{copy.hintBody}</p>
-        </div>
 
         <p className="mt-6 text-center text-sm text-slate-400">
           {copy.signupLink}
